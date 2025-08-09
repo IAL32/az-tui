@@ -34,8 +34,9 @@ type model struct {
 	json string
 
 	// selection
-	selected   int
-	activePane pane
+	cursor            int
+	lastSelectedIndex int
+	activePane        pane
 
 	// deps/config
 	rg string
@@ -80,9 +81,11 @@ func InitialModel() model {
 	t := table.New(
 		table.WithColumns(
 			[]table.Column{
-				{Title: "Revision", Width: 44},
-				{Title: "Active", Width: 8},
-				{Title: "Traffic%", Width: 10},
+				{Title: "Revision", Width: 28},
+				{Title: "Active", Width: 6},
+				{Title: "Traffic", Width: 8},
+				{Title: "Created", Width: 18},
+				{Title: "Status", Width: 12},
 			},
 		),
 	)
@@ -92,17 +95,18 @@ func InitialModel() model {
 	vp.SetContent("Select an app…")
 
 	return model{
-		apps:       nil,
-		revs:       nil,
-		json:       "",
-		selected:   0,
-		activePane: paneDetails,
-		rg:         os.Getenv("ACA_RG"),
-		list:       l,
-		spin:       sp,
-		revTable:   t,
-		jsonView:   vp,
-		loading:    true,
+		apps:              nil,
+		revs:              nil,
+		json:              "",
+		cursor:            0,
+		lastSelectedIndex: -1,
+		activePane:        paneDetails,
+		rg:                os.Getenv("ACA_RG"),
+		list:              l,
+		spin:              sp,
+		revTable:          t,
+		jsonView:          vp,
+		loading:           true,
 	}
 }
 

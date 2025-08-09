@@ -2,7 +2,7 @@
 // MVP features:
 // - Left: list of Container Apps (optional RG filter via ACA_RG)
 // - Right (tabs): Details JSON, Revisions table
-// - Keybindings: q quit | r refresh | tab switch pane | R reload revisions | l tail logs | e exec shell
+// - Keybindings: q quit | r refresh | tab switch pane | R reload revisions | l tail logs | s exec shell
 // - Uses Azure CLI under the hood for fast iteration. Auth/ctx via your existing `az` session.
 //
 // Build & Run

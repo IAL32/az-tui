@@ -5,14 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
 	m "az-tui/internal/models"
 )
-
-// -------------------------- AZ helpers --------------------------
 
 func RunAz(ctx context.Context, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "az", args...)
@@ -23,12 +20,6 @@ func RunAz(ctx context.Context, args ...string) (string, error) {
 		return "", fmt.Errorf("az %s: %w%s", strings.Join(args, " "), err, errb.String())
 	}
 	return out.String(), nil
-}
-
-func RunAzInteractive(args ...string) error {
-	cmd := exec.Command("az", args...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	return cmd.Run()
 }
 
 func ListContainerApps(ctx context.Context, rg string) ([]m.ContainerApp, error) {

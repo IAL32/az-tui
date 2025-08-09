@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // ----------------------------- Data -----------------------------
 
 type ContainerApp struct {
@@ -12,7 +14,9 @@ type ContainerApp struct {
 }
 
 type Revision struct {
-	Name    string `json:"name"`
-	Active  bool   `json:"active"`
-	Traffic int    `json:"traffic"`
+	Name      string    `json:"name"`
+	Active    bool      `json:"active"`
+	Traffic   int       `json:"traffic"`
+	CreatedAt time.Time `json:"createdAt"`
+	Status    string    `json:"status"`
 }
