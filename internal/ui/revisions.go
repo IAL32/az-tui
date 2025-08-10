@@ -245,7 +245,7 @@ func (m *model) seedRevisionListFromRevisions() {
 	}
 	items := make([]list.Item, 0, len(m.revs))
 	for _, r := range m.revs {
-		items = append(items, models.RevItem{r})
+		items = append(items, models.RevItem{Revision: r})
 	}
 	m.revList.SetItems(items)
 	// Restore the per-app cursor if valid, else select 0.
