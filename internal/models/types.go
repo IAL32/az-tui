@@ -21,6 +21,14 @@ type Revision struct {
 	Status    string    `json:"status"`
 }
 
+type Container struct {
+	Name    string
+	Image   string
+	Command []string
+	Args    []string
+	// add Ports, Env etc. as you like
+}
+
 type RevItem struct{ Revision }
 
 func (ri RevItem) Title() string { return ri.Name }

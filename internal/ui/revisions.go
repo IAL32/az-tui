@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,7 +15,29 @@ import (
 // Handle key events when in Revisions mode.
 func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	switch msg.String() {
-	case "enter", "e":
+	case "enter":
+		it := m.revList.SelectedItem()
+		if it == nil {
+			return m, nil, true
+		}
+		ri := it.(models.RevItem)
+		a, ok := m.currentApp()
+		if !ok {
+			return m, nil, true
+		}
+
+		m.mode = modeContainers
+		m.revName = ri.Name
+		// title + size
+		m.ctrList.Title = fmt.Sprintf("Containers — %s@%s", a.Name, ri.Name)
+		m.ctrList.SetSize(m.list.Width(), m.list.Height())
+
+		// no cache: clear right pane and load
+		m.ctrs = nil
+		m.jsonView.SetContent(m.containerHeader(a, ri.Name) + "\n\nLoading containers…")
+		return m, LoadContainersCmd(a, ri.Name), true
+
+	case "s":
 		it := m.revList.SelectedItem()
 		if it == nil {
 			return m, nil, true
@@ -116,4 +139,11 @@ func (m *model) seedRevisionListFromRevisions() {
 	}
 	m.revsCursor = sel
 	m.revList.Select(sel)
+}
+func (m model) containerHeader(a models.ContainerApp, rev string) string {
+	return fmt.Sprintf("App: %s  |  RG: %s  |  Rev: %s", a.Name, a.ResourceGroup, rev)
+}
+func (m model) prettyContainerJSON(c models.Container) string {
+	b, _ := json.MarshalIndent(c, "", "  ")
+	return string(b)
 }

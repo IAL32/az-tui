@@ -51,7 +51,7 @@ func GetAppDetails(ctx context.Context, name, rg string) (string, error) {
 	return buf.String(), nil
 }
 
-func ListRevisions(ctx context.Context, name, rg string) ([]m.Revision, error) {
+func ListRevisions(ctx context.Context, name string, rg string) ([]m.Revision, error) {
 	q := "[].{name:name, active:properties.active, traffic:(properties.trafficWeight||`0`)}"
 	raw, err := RunAz(ctx, "containerapp", "revision", "list", "-n", name, "-g", rg, "-o", "json", "--query", q)
 	if err != nil {
@@ -62,4 +62,34 @@ func ListRevisions(ctx context.Context, name, rg string) ([]m.Revision, error) {
 		return nil, err
 	}
 	return revs, nil
+}
+func ListContainersCmd(ctx context.Context, ct m.ContainerApp, revName string) ([]m.Container, error) {
+	// az containerapp revision show --name <app> --resource-group <rg> --revision <rev>
+	raw, err := RunAz(ctx, "containerapp", "revision", "show",
+		"-n", ct.Name, "-g", ct.ResourceGroup, "--revision", revName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse containers
+	var resp struct {
+		Properties struct {
+			Template struct {
+				Containers []struct {
+					Name    string   `json:"name"`
+					Image   string   `json:"image"`
+					Command []string `json:"command"`
+					Args    []string `json:"args"`
+				} `json:"containers"`
+			} `json:"template"`
+		} `json:"properties"`
+	}
+	if jerr := json.Unmarshal([]byte(raw), &resp); jerr != nil {
+		return nil, jerr
+	}
+	cs := make([]m.Container, 0, len(resp.Properties.Template.Containers))
+	for _, c := range resp.Properties.Template.Containers {
+		cs = append(cs, m.Container{Name: c.Name, Image: c.Image, Command: c.Command, Args: c.Args})
+	}
+	return cs, nil
 }

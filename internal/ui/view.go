@@ -14,9 +14,12 @@ func (m model) View() string {
 	}
 
 	var left string
-	if m.mode == modeRevs {
+	switch m.mode {
+	case modeContainers:
+		left = m.ctrList.View()
+	case modeRevs:
 		left = m.revList.View()
-	} else {
+	default:
 		left = m.list.View()
 	}
 
@@ -26,13 +29,16 @@ func (m model) View() string {
 
 	right := lipgloss.JoinVertical(
 		lipgloss.Left,
-		detailsTitle+"\n"+m.jsonView.View(),
 		revsTitle+"\n"+m.revTable.View(),
+		detailsTitle+"\n"+m.jsonView.View(),
 	)
 	var help string
-	if m.mode == modeRevs {
+	switch m.mode {
+	case modeContainers:
 		help = styleAccent.Render("[enter/e] exec  [l] logs  [b/esc] back  [q] quit  (/ filter)")
-	} else {
+	case modeRevs:
+		help = styleAccent.Render("[enter] containers  [e] exec  [l] logs  [b/esc] back  [q] quit  (/ filter)")
+	default:
 		help = styleAccent.Render("[enter] revisions  [l] logs  [s] exec  [r] refresh  [R] reload revs  [q] quit  (/ filter)")
 	}
 

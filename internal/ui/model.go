@@ -31,23 +31,26 @@ const (
 const (
 	modeApps mode = iota
 	modeRevs
+	modeContainers
 )
 
 type model struct {
 	// data
 	apps []models.ContainerApp
 	revs []models.Revision
+	ctrs []models.Container
 	json string
 
 	// selection
 	// Independent cursors + last-selected tracking
-	appsCursor    int // current index in apps list
-	lastAppsIndex int // last index we loaded details for
-	revsCursor    int // current index in revList
-	lastRevsIndex int // last rev index we acted on (optional)
+
+	appsCursor, lastAppsIndex int
+	revsCursor, lastRevsIndex int
+	ctrCursor, lastCtrIndex   int
 
 	// Per-app revision cursor memory (restore when you return)
-	revCursorByAppID map[string]int // "rg/name" -> rev index
+	revCursorByAppID map[string]int                // "rg/name" -> rev index    // Optional caches
+	containersByRev  map[string][]models.Container // key: revKey(appID, revName)
 
 	activePane pane
 
@@ -67,7 +70,9 @@ type model struct {
 	// mode
 	mode     mode
 	revList  list.Model
+	ctrList  list.Model
 	revAppID string
+	revName  string // selected revision name (containers page context)
 }
 
 // messages for async commands
@@ -83,6 +88,13 @@ type loadedDetailsMsg struct {
 type loadedRevsMsg struct {
 	revs []models.Revision
 	err  error
+}
+
+type loadedContainersMsg struct {
+	appID   string
+	revName string
+	ctrs    []models.Container
+	err     error
 }
 
 type noop struct{}
@@ -113,6 +125,11 @@ func InitialModel() model {
 	revList.SetShowStatusBar(false)
 	revList.SetFilteringEnabled(true)
 
+	ctrList := list.New([]list.Item{}, list.NewDefaultDelegate(), 32, 20)
+	ctrList.Title = "Containers"
+	ctrList.SetShowStatusBar(false)
+	ctrList.SetFilteringEnabled(true)
+
 	vp := viewport.New(80, 20)
 	vp.YPosition = 0
 	vp.SetContent("Select an app…")
@@ -120,12 +137,16 @@ func InitialModel() model {
 	return model{
 		apps:             nil,
 		revs:             nil,
+		ctrs:             nil,
 		json:             "",
 		appsCursor:       0,
 		lastAppsIndex:    -1,
 		revsCursor:       0,
 		lastRevsIndex:    -1,
+		ctrCursor:        0,
+		lastCtrIndex:     -1,
 		revCursorByAppID: make(map[string]int),
+		containersByRev:  make(map[string][]models.Container),
 		activePane:       paneDetails,
 		rg:               os.Getenv("ACA_RG"),
 		list:             l,
@@ -135,11 +156,22 @@ func InitialModel() model {
 		loading:          true,
 		mode:             modeApps,
 		revList:          revList,
+		ctrList:          ctrList,
 		revAppID:         "",
+		revName:          "",
 	}
 }
 
 func appID(a models.ContainerApp) string { return fmt.Sprintf("%s/%s", a.ResourceGroup, a.Name) }
+
+func revKey(appID, rev string) string { return appID + "@" + rev }
+
+func (m model) currentApp() (models.ContainerApp, bool) {
+	if m.appsCursor >= 0 && m.appsCursor < len(m.apps) {
+		return m.apps[m.appsCursor], true
+	}
+	return models.ContainerApp{}, false
+}
 
 func (m *model) syncAppsCursorFromList() {
 	idx := m.list.Index()

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	models "az-tui/internal/models"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -21,14 +22,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch m.mode {
 		case modeApps:
-			m, cmd, handled := m.handleAppsKey(msg)
-			if handled {
-				return m, cmd
+			if nm, cmd, handled := m.handleAppsKey(msg); handled {
+				return nm, cmd
 			}
 		case modeRevs:
-			m, cmd, handled := m.handleRevsKey(msg)
-			if handled {
-				return m, cmd
+			if nm, cmd, handled := m.handleRevsKey(msg); handled {
+				return nm, cmd
+			}
+		case modeContainers:
+			if nm, cmd, handled := m.handleContainersKey(msg); handled {
+				return nm, cmd
 			}
 		}
 
@@ -145,12 +148,55 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.revTable.SetRows(rows)
 		m.seedRevisionListFromRevisions()
 		return m, nil
-	}
 
-	if m.mode == modeRevs {
-		return m.updateRevsLists(msg)
+	case loadedContainersMsg:
+		if msg.err != nil {
+			m.ctrs = nil
+			m.ctrList.SetItems([]list.Item{ctrItem{Container: models.Container{Name: "Error", Image: msg.err.Error()}}})
+			return m, nil
+		}
+
+		// cache
+		m.containersByRev[revKey(msg.appID, msg.revName)] = msg.ctrs
+		m.ctrs = msg.ctrs
+
+		// build left items
+		items := make([]list.Item, 0, len(m.ctrs))
+		for _, c := range m.ctrs {
+			items = append(items, ctrItem{c})
+		}
+		m.ctrList.SetItems(items)
+
+		// select previous or 0
+		sel := m.ctrCursor
+		if sel < 0 || sel >= len(items) {
+			sel = 0
+		}
+		m.ctrList.Select(sel)
+		m.lastCtrIndex = -1 // force right-pane refresh on first movement
+
+		// render first container details if available
+		if len(m.ctrs) > 0 {
+			a, ok := m.currentApp()
+			if ok {
+				m.jsonView.SetContent(m.containerHeader(a, msg.revName) + "\n\n" + m.prettyContainerJSON(m.ctrs[sel]))
+			}
+		} else {
+			a, ok := m.currentApp()
+			if ok {
+				m.jsonView.SetContent(m.containerHeader(a, msg.revName) + "\n\nNo containers found.")
+			}
+		}
+		return m, nil
 	}
-	return m.updateAppsLists(msg)
+	switch m.mode {
+	case modeContainers:
+		return m.updateContainersList(msg)
+	case modeRevs:
+		return m.updateRevsLists(msg)
+	default:
+		return m.updateAppsLists(msg)
+	}
 }
 
 func (m model) isFiltering() bool {

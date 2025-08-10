@@ -38,3 +38,12 @@ func LoadRevsCmd(a m.ContainerApp) tea.Cmd {
 		return loadedRevsMsg{revs, err}
 	}
 }
+
+func LoadContainersCmd(a m.ContainerApp, revName string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		containers, err := azure.ListContainersCmd(ctx, a, revName)
+		return loadedContainersMsg{appID: a.Name, revName: revName, ctrs: containers, err: err}
+	}
+}
