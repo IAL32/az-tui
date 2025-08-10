@@ -1,68 +1,102 @@
 # AzulTUI
 
-AzulTUI is a **K9s-like Terminal UI** for managing **Azure Container Apps**, built with [Charm's Bubble Tea](https://github.com/charmbracelet/bubbletea). It wraps the Azure CLI for fast iteration and leverages your existing `az` authentication and context.
-
----
+AzulTUI is a **terminal-based user interface (TUI)** for managing Azure Container Apps, inspired by tools like K9s. It allows you to browse your Container Apps, inspect details and revisions, and access container logs or shells, all from within a single terminal UI.
 
 ## Features
 
-- **Browse Container Apps** in your subscription (optional filter by resource group via `ACA_RG`)
-- **View detailed JSON** for the selected app (name, resource group, location, FQDN, latest revision)
-- **Inspect revisions** with active flags and traffic split
-- **Tail logs** for live debugging (`l` key)
-- **Exec into running container** (`e` key)
-- **Keyboard navigation**:
-  - `q` — quit
-  - `r` — refresh apps
-  - `R` — reload revisions
-  - `tab` — switch between details and revisions pane
-  - `/` — filter list
+- **Browse Azure Container Apps** across your subscription (or limit to a resource group via `ACA_RG`).
+- **View detailed app information** (JSON) including name, resource group, location, ingress FQDN, and latest revision.
+- **Inspect revisions** with active indicators and traffic percentages.
+- **Tail logs** for apps, revisions, or containers.
+- **Exec into running containers** for debugging.
+- **Keyboard-driven navigation** with familiar shortcuts.
 
----
+## Key Bindings
+
+### Global
+
+- `q` / `Ctrl+C` – Quit
+- `/` – Filter list
+- `Esc` – Go back (in nested views)
+- `Enter` – Drill down (apps → revisions → containers)
+- `Tab` – Switch right pane (in apps mode)
+
+### Apps Mode
+
+- `r` – Refresh apps
+- `R` – Reload revisions
+- `l` – Logs for app's latest revision
+- `s` – Exec into latest revision
+
+### Revisions Mode
+
+- `Enter` – View containers in revision
+- `l` – Logs for revision
+- `e` – Exec into revision
+- `r` – Restart revision
+
+### Containers Mode
+
+- `l` – Logs for container
+- `e` – Exec into container
+- `r` – Restart revision containing container
 
 ## Installation
 
-```bash
-go mod init az-tui
-go get github.com/charmbracelet/bubbletea \
-       github.com/charmbracelet/bubbles \
-       github.com/charmbracelet/lipgloss
-```
+**Prerequisites:**
 
-You must have:
+- Go 1.20+
+- Azure CLI (`az login`)
+- Azure Container Apps extension: `az extension add -n containerapp`
 
-- **Azure CLI** installed
-- **Container Apps CLI extension**:
+**Build:**
 
 ```bash
-az extension add -n containerapp
+git clone https://github.com/IAL32/az-tui.git
+cd az-tui
+go build -o az-tui cmd/az-tui/main.go
 ```
 
----
+Or install directly:
+
+```bash
+go install github.com/IAL32/az-tui/cmd/az-tui@latest
+```
 
 ## Usage
 
-```bash
-# Optional: scope to a resource group
-export ACA_RG="my-resource-group"
+(Optional) restrict to a resource group:
 
-# Run AzulTUI
-go run .
+```bash
+export ACA_RG="my-resource-group"
 ```
 
----
+Run:
+
+```bash
+./az-tui
+```
+
+Navigate with arrow keys or `j`/`k`, drill down with `Enter`, and use the key bindings above for actions.
+
+## Architecture
+
+AzulTUI uses the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework:
+
+- **Modes:** `apps` → `revisions` → `containers`
+- **Azure CLI integration:** Fetches data using `az containerapp` commands
+- **UI Components:** Bubbles list, table, and viewport for flexible layouts
+- **Asynchronous updates:** Commands run in background and update the model via messages
 
 ## Roadmap
 
-- Fuzzy search across apps
-- Subscription and environment filters
-- Replica health status
-- Traffic split editing
-- Job run browsing
-- Metrics integration
-
----
+- Fuzzy search
+- Subscription/environment switching
+- Show container replica health
+- Edit traffic split allocations
+- Browse Azure Container Apps Jobs
+- Integrate metrics (CPU/memory, HTTP rates)
 
 ## License
 
-MIT
+MIT License. See [LICENSE](./LICENSE).
