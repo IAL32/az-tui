@@ -34,6 +34,14 @@ const (
 	modeContainers
 )
 
+// ConfirmDialog holds state for a generic yes/no modal.
+type ConfirmDialog struct {
+	Visible bool
+	Text    string
+	OnYes   func(m model) (model, tea.Cmd) // executed if user presses yes
+	OnNo    func(m model) (model, tea.Cmd) // executed if user presses no/cancel
+}
+
 type model struct {
 	// data
 	apps []models.ContainerApp
@@ -73,6 +81,15 @@ type model struct {
 	ctrList  list.Model
 	revAppID string
 	revName  string // selected revision name (containers page context)
+
+	// confirmation dialog
+	confirm ConfirmDialog
+
+	// terminal size
+	termW, termH int
+
+	// status line
+	statusLine string
 }
 
 // messages for async commands
@@ -95,6 +112,13 @@ type loadedContainersMsg struct {
 	revName string
 	ctrs    []models.Container
 	err     error
+}
+
+type revisionRestartedMsg struct {
+	appID   string
+	revName string
+	err     error
+	out     string
 }
 
 type noop struct{}
@@ -159,6 +183,7 @@ func InitialModel() model {
 		ctrList:          ctrList,
 		revAppID:         "",
 		revName:          "",
+		statusLine:       "",
 	}
 }
 
@@ -212,6 +237,14 @@ func (m *model) leaveRevs() {
 	m.mode = modeApps
 	m.revAppID = ""
 	m.revList.SetItems(nil)
+}
+
+func (m model) withConfirm(text string, onYes func(model) (model, tea.Cmd), onNo func(model) (model, tea.Cmd)) model {
+	m.confirm.Visible = true
+	m.confirm.Text = text
+	m.confirm.OnYes = onYes
+	m.confirm.OnNo = onNo
+	return m
 }
 
 func (m model) Init() tea.Cmd {

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"os/exec"
 	"time"
 
 	azure "az-tui/internal/azure"
@@ -45,5 +46,16 @@ func LoadContainersCmd(a m.ContainerApp, revName string) tea.Cmd {
 		defer cancel()
 		containers, err := azure.ListContainersCmd(ctx, a, revName)
 		return loadedContainersMsg{appID: a.Name, revName: revName, ctrs: containers, err: err}
+	}
+}
+
+func RestartRevisionCmd(app m.ContainerApp, rev string) tea.Cmd {
+	return func() tea.Msg {
+		cmd := exec.Command("az", "containerapp", "revision", "restart",
+			"-n", app.Name, "-g", app.ResourceGroup, "--revision", rev)
+		b, err := cmd.CombinedOutput()
+		return revisionRestartedMsg{
+			appID: appID(app), revName: rev, err: err, out: string(b),
+		}
 	}
 }

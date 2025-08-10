@@ -8,6 +8,7 @@ import (
 	models "az-tui/internal/models"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type ctrItem struct{ Container models.Container }
@@ -92,4 +93,24 @@ func (m model) updateContainersList(msg tea.Msg) (model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 	}
 	return m, nil
+}
+func (m model) viewContainers() string {
+	if m.err != nil && !m.loading {
+		return StyleError.Render("Error: ") + m.err.Error() + "  [b/esc] back"
+	}
+
+	left := m.ctrList.View()
+	right := styleTitle.Render("Details") + "\n" + m.jsonView.View()
+	help := styleAccent.Render("[enter/e] exec  [l] logs  [r] restart  [b/esc] back  [q] quit  (/ filter)")
+
+	body := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		lipgloss.NewStyle().Width(34).Render(left),
+		lipgloss.NewStyle().Padding(0, 1).Render(right),
+	) + "\n" + help + "\n" + m.statusLine
+
+	if m.confirm.Visible {
+		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
+	}
+	return body
 }

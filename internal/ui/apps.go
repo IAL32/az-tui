@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Handle key events when in Apps mode.
@@ -75,4 +76,31 @@ func (m model) updateAppsLists(msg tea.Msg) (model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 	}
 	return m, nil
+}
+func (m model) viewApps() string {
+	if m.loading {
+		return styleTitle.Render("Loading apps… ") + m.spin.View()
+	}
+	if m.err != nil {
+		return StyleError.Render("Error: ") + m.err.Error() + " Press r to retry or q to quit."
+	}
+
+	left := m.list.View()
+	right := lipgloss.JoinVertical(
+		lipgloss.Left,
+		styleTitle.Render("Details")+"\n"+m.jsonView.View(),
+		styleTitle.Render("Revisions")+"\n"+m.revTable.View(),
+	)
+	help := styleAccent.Render("[enter] revisions  [l] logs  [s] exec  [r] refresh  [R] reload revs  [q] quit  (/ filter)")
+
+	body := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		lipgloss.NewStyle().Width(34).Render(left),
+		lipgloss.NewStyle().Padding(0, 1).Render(right),
+	) + "\n" + help + "\n" + m.statusLine
+
+	if m.confirm.Visible {
+		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
+	}
+	return body
 }

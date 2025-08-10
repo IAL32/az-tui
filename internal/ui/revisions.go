@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Handle key events when in Revisions mode.
@@ -36,7 +37,36 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.ctrs = nil
 		m.jsonView.SetContent(m.containerHeader(a, ri.Name) + "\n\nLoading containers…")
 		return m, LoadContainersCmd(a, ri.Name), true
+	case "r":
+		it := m.revList.SelectedItem()
+		if it == nil {
+			// If the list hasn't populated yet, nothing to do.
+			// (Optionally: set a statusLine like "Revisions still loading…")
+			return m, nil, true
+		}
+		ri := it.(models.RevItem)
+		a, ok := m.currentApp()
+		if !ok {
+			return m, nil, true
+		}
 
+		containerNames := make([]string, 0, len(m.ctrs))
+		for _, c := range m.ctrs {
+			containerNames = append(containerNames, c.Name)
+		}
+
+		txt := fmt.Sprintf("Restart revision?\n\nApp: %s\nRevision: %s\n(affects all containers incl. %q)",
+			a.Name, ri.Name, containerNames)
+
+		m = m.withConfirm(
+			txt,
+			func(mm model) (model, tea.Cmd) {
+				mm.statusLine = "Restarting revision..."
+				return mm, RestartRevisionCmd(a, ri.Name)
+			},
+			nil, // no action on cancel
+		)
+		return m, nil, true
 	case "s":
 		it := m.revList.SelectedItem()
 		if it == nil {
@@ -146,4 +176,25 @@ func (m model) containerHeader(a models.ContainerApp, rev string) string {
 func (m model) prettyContainerJSON(c models.Container) string {
 	b, _ := json.MarshalIndent(c, "", "  ")
 	return string(b)
+}
+
+func (m model) viewRevs() string {
+	if m.err != nil && !m.loading {
+		return StyleError.Render("Error: ") + m.err.Error() + "  [b/esc] back"
+	}
+
+	left := m.revList.View()
+	right := styleTitle.Render("Details") + "\n" + m.jsonView.View()
+	help := styleAccent.Render("[enter] containers  [e] exec  [l] logs  [r] restart revision  [b/esc] back  [q] quit  (/ filter)")
+
+	body := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		lipgloss.NewStyle().Width(34).Render(left),
+		lipgloss.NewStyle().Padding(0, 1).Render(right),
+	) + "\n" + help + "\n" + m.statusLine
+
+	if m.confirm.Visible {
+		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
+	}
+	return body
 }

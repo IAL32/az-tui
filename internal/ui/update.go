@@ -20,6 +20,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.isFiltering() {
 			break
 		}
+		if m.confirm.Visible {
+			switch msg.String() {
+			case "y", "enter":
+				m.confirm.Visible = false
+				if m.confirm.OnYes != nil {
+					return m.confirm.OnYes(m)
+				}
+				return m, nil
+			case "n", "esc":
+				m.confirm.Visible = false
+				if m.confirm.OnNo != nil {
+					return m.confirm.OnNo(m)
+				}
+				return m, nil
+			}
+			return m, nil // swallow all other keys when modal visible
+		}
 		switch m.mode {
 		case modeApps:
 			if nm, cmd, handled := m.handleAppsKey(msg); handled {
@@ -36,18 +53,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		// resize components
 		w, h := msg.Width, msg.Height
+
 		leftW := 34
-		if m.mode == modeRevs {
-			m.revList.SetSize(leftW, h-2)
+		rightW := max(20, w-leftW-2)
+
+		// Always size all three lists so titles don’t disappear when switching
+		m.list.SetSize(leftW, h-2)
+		m.revList.SetSize(leftW, h-2)
+		m.ctrList.SetSize(leftW, h-2)
+
+		m.jsonView.Width = rightW
+		if m.mode == modeApps {
+			// Split right pane: Details (top) + Revisions table (bottom)
+			m.jsonView.Height = (h - 4) / 2
+			m.revTable.SetWidth(rightW)
+			m.revTable.SetHeight(h - 4 - m.jsonView.Height)
 		} else {
-			m.list.SetSize(leftW, h-2)
+			// Revisions/Containers mode: Details uses full right pane height
+			m.jsonView.Height = h - 4
+			m.revTable.SetWidth(rightW)
+			m.revTable.SetHeight(0) // hidden
 		}
-		m.jsonView.Width = max(20, w-leftW-2)
-		m.jsonView.Height = (h - 4) / 2
-		m.revTable.SetWidth(m.jsonView.Width)
-		m.revTable.SetHeight(h - 4 - m.jsonView.Height)
+		m.termW, m.termH = w, h
+		return m, nil
 
 	case loadedAppsMsg:
 		m.loading = false
@@ -186,6 +215,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if ok {
 				m.jsonView.SetContent(m.containerHeader(a, msg.revName) + "\n\nNo containers found.")
 			}
+		}
+		return m, nil
+	case revisionRestartedMsg:
+		if msg.err != nil {
+			m.statusLine = fmt.Sprintf("Restart failed: %v", msg.err)
+			return m, nil
+		}
+		m.statusLine = "Revision restart triggered."
+		// Optional: refresh revs/containers after a short delay or immediately
+		if a, ok := m.currentApp(); ok && appID(a) == msg.appID && m.revName == msg.revName {
+			// you can choose to reload containers/revisions; often not needed immediately
+			// return m, LoadRevsCmd(a) // if you want to reflect status changes
 		}
 		return m, nil
 	}
