@@ -7,9 +7,60 @@ import (
 
 	models "az-tui/internal/models"
 
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// Container-related messages
+type loadedContainersMsg struct {
+	appID   string
+	revName string
+	ctrs    []models.Container
+	err     error
+}
+
+// Handle loadedContainersMsg
+func (m model) handleLoadedContainersMsg(msg loadedContainersMsg) (model, tea.Cmd) {
+	if msg.err != nil {
+		m.ctrs = nil
+		m.ctrList.SetItems([]list.Item{ctrItem{Container: models.Container{Name: "Error", Image: msg.err.Error()}}})
+		return m, nil
+	}
+
+	// cache
+	m.containersByRev[revKey(msg.appID, msg.revName)] = msg.ctrs
+	m.ctrs = msg.ctrs
+
+	// build left items
+	items := make([]list.Item, 0, len(m.ctrs))
+	for _, c := range m.ctrs {
+		items = append(items, ctrItem{c})
+	}
+	m.ctrList.SetItems(items)
+
+	// select previous or 0
+	sel := m.ctrCursor
+	if sel < 0 || sel >= len(items) {
+		sel = 0
+	}
+	m.ctrList.Select(sel)
+	m.lastCtrIndex = -1 // force right-pane refresh on first movement
+
+	// render first container details if available
+	if len(m.ctrs) > 0 {
+		a, ok := m.currentApp()
+		if ok {
+			m.jsonView.SetContent(m.containerHeader(a, msg.revName) + "\n\n" + m.prettyContainerJSON(m.ctrs[sel]))
+		}
+	} else {
+		a, ok := m.currentApp()
+		if ok {
+			m.jsonView.SetContent(m.containerHeader(a, msg.revName) + "\n\nNo containers found.")
+		}
+	}
+	return m, nil
+}
 
 type ctrItem struct{ Container models.Container }
 

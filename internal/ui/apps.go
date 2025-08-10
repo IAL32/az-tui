@@ -1,13 +1,79 @@
 package ui
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 
+	models "az-tui/internal/models"
+
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// App-related messages
+type loadedAppsMsg struct {
+	apps []models.ContainerApp
+	err  error
+}
+
+type loadedDetailsMsg struct {
+	json string
+	err  error
+}
+
+// Handle loadedAppsMsg
+func (m model) handleLoadedAppsMsg(msg loadedAppsMsg) (model, tea.Cmd) {
+	m.loading = false
+	m.err = msg.err
+	if msg.err != nil {
+		return m, nil
+	}
+	m.apps = msg.apps
+	m.lastAppsIndex = -1 // force detail load on first render
+	items := make([]list.Item, len(m.apps))
+	for i, a := range m.apps {
+		items[i] = item(a)
+	}
+	m.list.SetItems(items)
+	if len(items) == 0 {
+		m.jsonView.SetContent("No container apps found.")
+		m.revTable.SetRows(nil)
+		return m, nil
+	}
+	// Trigger initial load
+	return m, tea.Batch(
+		LoadDetailsCmd(m.apps[m.appsCursor]),
+		LoadRevsCmd(m.apps[m.appsCursor]),
+	)
+}
+
+// Handle loadedDetailsMsg
+func (m model) handleLoadedDetailsMsg(msg loadedDetailsMsg) (model, tea.Cmd) {
+	m.err = msg.err
+	if msg.err != nil {
+		m.json = ""
+		m.jsonView.SetContent(StyleError.Render(msg.err.Error()))
+		return m, nil
+	}
+
+	// Pretty-print so indentation is stable
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, []byte(msg.json), "", "  "); err != nil {
+		// fall back to raw if indent fails
+		m.json = msg.json
+	} else {
+		m.json = buf.String()
+	}
+
+	// Ensure indentation starts at col 0 on its own line
+	// m.jsonView.SetWrap(false) // don't reflow JSON
+	m.jsonView.SetContent(m.headerForCurrent() + "\n\n" + m.json)
+	return m, nil
+}
 
 // Handle key events when in Apps mode.
 func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {

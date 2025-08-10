@@ -5,13 +5,99 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 
 	models "az-tui/internal/models"
 
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// Revision-related messages
+type loadedRevsMsg struct {
+	revs []models.Revision
+	err  error
+}
+
+type revisionRestartedMsg struct {
+	appID   string
+	revName string
+	err     error
+	out     string
+}
+
+// Handle loadedRevsMsg
+func (m model) handleLoadedRevsMsg(msg loadedRevsMsg) (model, tea.Cmd) {
+	m.err = msg.err
+
+	pad := func(cells ...string) table.Row {
+		row := make([]string, 5)
+		copy(row, cells)
+		return row
+	}
+
+	if msg.err != nil {
+		m.revs = nil
+		m.revTable.SetRows([]table.Row{pad("Error", msg.err.Error())})
+		return m, nil
+	}
+
+	m.revs = msg.revs
+	if len(m.revs) == 0 {
+		m.revTable.SetRows([]table.Row{pad("No revisions found")})
+		return m, nil
+	}
+
+	// Optional: sort by traffic desc
+	sort.Slice(m.revs, func(i, j int) bool { return m.revs[i].Traffic > m.revs[j].Traffic })
+
+	rows := make([]table.Row, 0, len(m.revs))
+	for _, r := range m.revs {
+		activeMark := "·"
+		if r.Active {
+			activeMark = "✓"
+		}
+
+		created := "-"
+		if !r.CreatedAt.IsZero() {
+			created = r.CreatedAt.Format("2006-01-02 15:04")
+		}
+
+		status := r.Status
+		if status == "" {
+			status = "-"
+		}
+
+		rows = append(rows, pad(
+			r.Name,
+			activeMark,
+			fmt.Sprintf("%3d%%", r.Traffic), // number only, right-aligned
+			created,
+			status,
+		))
+	}
+
+	m.revTable.SetRows(rows)
+	m.seedRevisionListFromRevisions()
+	return m, nil
+}
+
+// Handle revisionRestartedMsg
+func (m model) handleRevisionRestartedMsg(msg revisionRestartedMsg) (model, tea.Cmd) {
+	if msg.err != nil {
+		m.statusLine = fmt.Sprintf("Restart failed: %v", msg.err)
+		return m, nil
+	}
+	m.statusLine = "Revision restart triggered."
+	// Optional: refresh revs/containers after a short delay or immediately
+	if a, ok := m.currentApp(); ok && appID(a) == msg.appID && m.revName == msg.revName {
+		// you can choose to reload containers/revisions; often not needed immediately
+		// return m, LoadRevsCmd(a) // if you want to reflect status changes
+	}
+	return m, nil
+}
 
 // Handle key events when in Revisions mode.
 func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {

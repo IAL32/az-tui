@@ -94,33 +94,6 @@ type model struct {
 
 // messages for async commands
 
-type loadedAppsMsg struct {
-	apps []models.ContainerApp
-	err  error
-}
-type loadedDetailsMsg struct {
-	json string
-	err  error
-}
-type loadedRevsMsg struct {
-	revs []models.Revision
-	err  error
-}
-
-type loadedContainersMsg struct {
-	appID   string
-	revName string
-	ctrs    []models.Container
-	err     error
-}
-
-type revisionRestartedMsg struct {
-	appID   string
-	revName string
-	err     error
-	out     string
-}
-
 type noop struct{}
 
 func InitialModel() model {
