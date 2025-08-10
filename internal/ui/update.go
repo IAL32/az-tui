@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
 	"sort"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -19,52 +17,34 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.isFiltering() {
-			break // filtering is active, do not process global key commands
+			break
 		}
-		switch msg.String() {
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
+		switch m.mode {
+		case modeApps:
+			m, cmd, handled := m.handleAppsKey(msg)
+			if handled {
+				return m, cmd
 			}
-		case "down", "j":
-			if m.cursor < len(m.apps)-1 {
-				m.cursor++
+		case modeRevs:
+			m, cmd, handled := m.handleRevsKey(msg)
+			if handled {
+				return m, cmd
 			}
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "tab":
-			if m.activePane == paneDetails {
-				m.activePane = paneRevisions
-			} else {
-				m.activePane = paneDetails
-			}
-			return m, nil
-		case "r":
-			m.loading, m.err = true, nil
-			return m, tea.Batch(LoadAppsCmd(m.rg), m.spin.Tick)
-		case "R":
-			return m, LoadRevsCmd(m.apps[m.cursor])
-		case "l":
-			a := m.apps[m.cursor]
-			cmd := exec.Command("az", "containerapp", "logs", "show", "-n", a.Name, "-g", a.ResourceGroup, "--follow")
-			cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-			fmt.Println("--- Ctrl+C to stop logs ---")
-			return m, tea.ExecProcess(cmd, func(err error) tea.Msg { return noop{} })
-		case "s":
-			a := m.apps[m.cursor]
-			cmd := exec.Command("az", "containerapp", "exec", "-n", a.Name, "-g", a.ResourceGroup, "--command", "/bin/sh")
-			cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-			return m, tea.ExecProcess(cmd, func(err error) tea.Msg { return noop{} })
 		}
 
 	case tea.WindowSizeMsg:
 		// resize components
 		w, h := msg.Width, msg.Height
-		m.list.SetSize(32, h-2)
-		m.jsonView.Width = max(20, w-34)
+		leftW := 34
+		if m.mode == modeRevs {
+			m.revList.SetSize(leftW, h-2)
+		} else {
+			m.list.SetSize(leftW, h-2)
+		}
+		m.jsonView.Width = max(20, w-leftW-2)
 		m.jsonView.Height = (h - 4) / 2
+		m.revTable.SetWidth(m.jsonView.Width)
 		m.revTable.SetHeight(h - 4 - m.jsonView.Height)
-		return m, nil
 
 	case loadedAppsMsg:
 		m.loading = false
@@ -73,7 +53,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.apps = msg.apps
-		m.lastSelectedIndex = -1 // force detail load on first render
+		m.lastAppsIndex = -1 // force detail load on first render
 		items := make([]list.Item, len(m.apps))
 		for i, a := range m.apps {
 			items[i] = item(a)
@@ -86,8 +66,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Trigger initial load
 		return m, tea.Batch(
-			LoadDetailsCmd(m.apps[m.cursor]),
-			LoadRevsCmd(m.apps[m.cursor]),
+			LoadDetailsCmd(m.apps[m.appsCursor]),
+			LoadRevsCmd(m.apps[m.appsCursor]),
 		)
 
 	case loadedDetailsMsg:
@@ -163,72 +143,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.revTable.SetRows(rows)
+		m.seedRevisionListFromRevisions()
 		return m, nil
 	}
 
-	return updateSelectedItems(m, msg)
+	if m.mode == modeRevs {
+		return m.updateRevsLists(msg)
+	}
+	return m.updateAppsLists(msg)
 }
 
 func (m model) isFiltering() bool {
 	return m.list.FilterState() == list.Filtering
 }
 
-/**
- * updateSelectedItems updates the selected items in the model based on the given message.
- * It delegates to the list component for handling list-specific messages.
- * Finally, it updates the model with any commands returned by the list component.
- */
-func updateSelectedItems(m model, msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
-	appendCmd := func(cmd tea.Cmd) {
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	// Always update the list first
-	var listCmd tea.Cmd
-	m.list, listCmd = m.list.Update(msg)
-	appendCmd(listCmd)
-
-	// Always update spinner
-	var spinCmd tea.Cmd
-	m.spin, spinCmd = m.spin.Update(msg)
-	appendCmd(spinCmd)
-
-	// If filtering, stop here (don't trigger global commands)
-	if m.isFiltering() {
-		return m, tea.Batch(cmds...)
-	}
-
-	// Guard against invalid cursor or empty list
-	if len(m.apps) == 0 || m.cursor < 0 || m.cursor >= len(m.apps) {
-		return m, tea.Batch(cmds...)
-	}
-
-	currIndex := m.cursor
-	currApp := m.apps[currIndex]
-
-	// Only load details/revs if the selection has changed
-	if currIndex != m.lastSelectedIndex {
-		m.lastSelectedIndex = currIndex
-
-		// Show a loading placeholder
-		m.jsonView.SetContent(m.headerForCurrent() + "\n\n" + "Loading details...")
-		m.revTable.SetRows(nil) // clear rev table until loaded
-
-		appendCmd(LoadDetailsCmd(currApp))
-		appendCmd(LoadRevsCmd(currApp))
-	}
-
-	return m, tea.Batch(cmds...)
-}
-
 func (m model) headerForCurrent() string {
-	if len(m.apps) == 0 || m.cursor < 0 || m.cursor >= len(m.apps) {
+	if len(m.apps) == 0 || m.appsCursor < 0 || m.appsCursor >= len(m.apps) {
 		return ""
 	}
-	curr := m.apps[m.cursor]
+	curr := m.apps[m.appsCursor]
 	fqdn := curr.IngressFQDN
 	if fqdn == "" {
 		fqdn = "-"

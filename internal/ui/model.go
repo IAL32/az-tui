@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"os"
 
 	models "az-tui/internal/models"
@@ -14,18 +15,23 @@ import (
 
 // ------------------------------ UI ------------------------------
 
-type pane int
-
-const (
-	paneDetails pane = iota
-	paneRevisions
-)
-
 type item models.ContainerApp
 
 func (i item) Title() string       { return i.Name }
 func (i item) Description() string { return i.ResourceGroup }
 func (i item) FilterValue() string { return i.Name + " " + i.ResourceGroup }
+
+type pane int
+type mode int
+
+const (
+	paneDetails pane = iota
+	paneRevisions
+)
+const (
+	modeApps mode = iota
+	modeRevs
+)
 
 type model struct {
 	// data
@@ -34,9 +40,16 @@ type model struct {
 	json string
 
 	// selection
-	cursor            int
-	lastSelectedIndex int
-	activePane        pane
+	// Independent cursors + last-selected tracking
+	appsCursor    int // current index in apps list
+	lastAppsIndex int // last index we loaded details for
+	revsCursor    int // current index in revList
+	lastRevsIndex int // last rev index we acted on (optional)
+
+	// Per-app revision cursor memory (restore when you return)
+	revCursorByAppID map[string]int // "rg/name" -> rev index
+
+	activePane pane
 
 	// deps/config
 	rg string
@@ -50,6 +63,11 @@ type model struct {
 	// status
 	loading bool
 	err     error
+
+	// mode
+	mode     mode
+	revList  list.Model
+	revAppID string
 }
 
 // messages for async commands
@@ -89,25 +107,79 @@ func InitialModel() model {
 			},
 		),
 	)
+	revList := list.New([]list.Item{}, list.NewDefaultDelegate(), 32, 20)
+	revList.Title = "Revisions"
+	revList.SetShowTitle(true)
+	revList.SetShowStatusBar(false)
+	revList.SetFilteringEnabled(true)
 
 	vp := viewport.New(80, 20)
 	vp.YPosition = 0
 	vp.SetContent("Select an app…")
 
 	return model{
-		apps:              nil,
-		revs:              nil,
-		json:              "",
-		cursor:            0,
-		lastSelectedIndex: -1,
-		activePane:        paneDetails,
-		rg:                os.Getenv("ACA_RG"),
-		list:              l,
-		spin:              sp,
-		revTable:          t,
-		jsonView:          vp,
-		loading:           true,
+		apps:             nil,
+		revs:             nil,
+		json:             "",
+		appsCursor:       0,
+		lastAppsIndex:    -1,
+		revsCursor:       0,
+		lastRevsIndex:    -1,
+		revCursorByAppID: make(map[string]int),
+		activePane:       paneDetails,
+		rg:               os.Getenv("ACA_RG"),
+		list:             l,
+		spin:             sp,
+		revTable:         t,
+		jsonView:         vp,
+		loading:          true,
+		mode:             modeApps,
+		revList:          revList,
+		revAppID:         "",
 	}
+}
+
+func appID(a models.ContainerApp) string { return fmt.Sprintf("%s/%s", a.ResourceGroup, a.Name) }
+
+func (m *model) syncAppsCursorFromList() {
+	idx := m.list.Index()
+	if idx >= 0 && idx < len(m.apps) {
+		m.appsCursor = idx
+	}
+}
+
+func (m *model) syncRevsCursorFromList() {
+	idx := m.revList.Index()
+	if idx >= 0 && idx < len(m.revs) {
+		m.revsCursor = idx
+	}
+}
+
+func (m *model) enterRevsFor(a models.ContainerApp) tea.Cmd {
+	m.mode = modeRevs
+	m.revAppID = appID(a)
+
+	// Title reflects context
+	m.revList.Title = fmt.Sprintf("Revisions — %s", a.Name)
+	m.revList.SetShowTitle(true)
+
+	// Mirror the current left pane size so the title has space immediately
+	m.revList.SetSize(m.list.Width(), m.list.Height())
+
+	m.revList.SetItems(nil)
+	m.revTable.SetRows(nil) // right bottom pane
+	return LoadRevsCmd(a)
+}
+
+// Call when leaving revisions mode.
+func (m *model) leaveRevs() {
+	// Remember current rev cursor for this app so we can restore next time.
+	if m.revAppID != "" {
+		m.revCursorByAppID[m.revAppID] = m.revsCursor
+	}
+	m.mode = modeApps
+	m.revAppID = ""
+	m.revList.SetItems(nil)
 }
 
 func (m model) Init() tea.Cmd {

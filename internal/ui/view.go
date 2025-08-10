@@ -13,7 +13,12 @@ func (m model) View() string {
 			" Press r to retry or q to quit."
 	}
 
-	left := m.list.View()
+	var left string
+	if m.mode == modeRevs {
+		left = m.revList.View()
+	} else {
+		left = m.list.View()
+	}
 
 	// Titles
 	detailsTitle := styleTitle.Render("Details")
@@ -24,10 +29,12 @@ func (m model) View() string {
 		detailsTitle+"\n"+m.jsonView.View(),
 		revsTitle+"\n"+m.revTable.View(),
 	)
-
-	help := styleAccent.Render(
-		"[q] quit  [r] refresh  [R] reload revs  [l] logs  [e] exec  (/ filter list)",
-	)
+	var help string
+	if m.mode == modeRevs {
+		help = styleAccent.Render("[enter/e] exec  [l] logs  [b/esc] back  [q] quit  (/ filter)")
+	} else {
+		help = styleAccent.Render("[enter] revisions  [l] logs  [s] exec  [r] refresh  [R] reload revs  [q] quit  (/ filter)")
+	}
 
 	return lipgloss.JoinHorizontal(
 		lipgloss.Top,

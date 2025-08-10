@@ -20,3 +20,14 @@ type Revision struct {
 	CreatedAt time.Time `json:"createdAt"`
 	Status    string    `json:"status"`
 }
+
+type RevItem struct{ Revision }
+
+func (ri RevItem) Title() string { return ri.Name }
+func (ri RevItem) Description() string {
+	if ri.Active {
+		return "active"
+	}
+	return ""
+}
+func (ri RevItem) FilterValue() string { return ri.Name }
