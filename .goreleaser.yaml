@@ -52,21 +52,6 @@ release:
     owner: IAL32
     name: az-tui
 
-# 'brews' is deprecated; use 'homebrew_casks'
-homebrew_casks:
-  - name: az-tui
-    # ids: [az-tui-archives]   # or omit to include all archives
-    repository:
-      owner: IAL32
-      name: homebrew-tap
-      # token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"   # if cross-repo push from CI
-    description: "A fast, keyboard-first TUI for Azure Container Apps."
-    homepage: "https://github.com/IAL32/az-tui"
-    license: "MIT"
-    url:
-      template: "https://github.com/IAL32/az-tui/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-
-
 # Optional: Scoop (note 'repository' not 'bucket')
 # scoops:
 #   - name: az-tui
