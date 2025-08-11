@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
 
 	models "az-tui/internal/models"
 
@@ -33,21 +31,18 @@ func (m model) handleLoadedAppsMsg(msg loadedAppsMsg) (model, tea.Cmd) {
 		return m, nil
 	}
 	m.apps = msg.apps
-	m.lastAppsIndex = -1 // force detail load on first render
-	items := make([]list.Item, len(m.apps))
-	for i, a := range m.apps {
-		items[i] = item(a)
-	}
-	m.list.SetItems(items)
-	if len(items) == 0 {
-		m.jsonView.SetContent("No container apps found.")
-		m.revTable.SetRows(nil)
+
+	if len(m.apps) == 0 {
 		return m, nil
 	}
-	// Trigger initial load
+
+	// Set initial selection
+	m.selectedApp = 0
+
+	// Trigger initial load for selected app
 	return m, tea.Batch(
-		LoadDetailsCmd(m.apps[m.appsCursor]),
-		LoadRevsCmd(m.apps[m.appsCursor]),
+		LoadDetailsCmd(m.apps[m.selectedApp]),
+		LoadRevsCmd(m.apps[m.selectedApp]),
 	)
 }
 
@@ -56,7 +51,6 @@ func (m model) handleLoadedDetailsMsg(msg loadedDetailsMsg) (model, tea.Cmd) {
 	m.err = msg.err
 	if msg.err != nil {
 		m.json = ""
-		m.jsonView.SetContent(StyleError.Render(msg.err.Error()))
 		return m, nil
 	}
 
@@ -69,9 +63,6 @@ func (m model) handleLoadedDetailsMsg(msg loadedDetailsMsg) (model, tea.Cmd) {
 		m.json = buf.String()
 	}
 
-	// Ensure indentation starts at col 0 on its own line
-	// m.jsonView.SetWrap(false) // don't reflow JSON
-	m.jsonView.SetContent(m.headerForCurrent() + "\n\n" + m.json)
 	return m, nil
 }
 
@@ -80,84 +71,101 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit, true
+	case "j", "down":
+		if m.selectedApp < len(m.apps)-1 {
+			m.selectedApp++
+			// Load details for newly selected app
+			return m, tea.Batch(
+				LoadDetailsCmd(m.apps[m.selectedApp]),
+				LoadRevsCmd(m.apps[m.selectedApp]),
+			), true
+		}
+		return m, nil, true
+	case "k", "up":
+		if m.selectedApp > 0 {
+			m.selectedApp--
+			// Load details for newly selected app
+			return m, tea.Batch(
+				LoadDetailsCmd(m.apps[m.selectedApp]),
+				LoadRevsCmd(m.apps[m.selectedApp]),
+			), true
+		}
+		return m, nil, true
 	case "enter":
 		if len(m.apps) == 0 {
 			return m, nil, true
 		}
-		a := m.apps[m.appsCursor]
+		a := m.apps[m.selectedApp]
 		return m, m.enterRevsFor(a), true
 	case "R":
 		if len(m.apps) == 0 {
 			return m, nil, true
 		}
-		return m, LoadRevsCmd(m.apps[m.appsCursor]), true
+		return m, LoadRevsCmd(m.apps[m.selectedApp]), true
 	case "l":
-		a := m.apps[m.appsCursor]
-		cmd := exec.Command("az", "containerapp", "logs", "show", "-n", a.Name, "-g", a.ResourceGroup, "--follow")
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		fmt.Println("--- Ctrl+C to stop logs ---")
-		return m, tea.ExecProcess(cmd, func(error) tea.Msg { return noop{} }), true
+		a := m.apps[m.selectedApp]
+		return m, m.azureCommands.ShowAppLogs(a), true
 	case "s", "e":
-		a := m.apps[m.appsCursor]
-		cmd := exec.Command("az", "containerapp", "exec", "-n", a.Name, "-g", a.ResourceGroup, "--command", "/bin/sh")
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		return m, tea.ExecProcess(cmd, func(error) tea.Msg { return noop{} }), true
-	case "tab":
-		if m.activePane == paneDetails {
-			m.activePane = paneRevisions
-		} else {
-			m.activePane = paneDetails
-		}
-		return m, nil, true
+		a := m.apps[m.selectedApp]
+		return m, m.azureCommands.ExecIntoApp(a), true
 	}
 	return m, nil, false
 }
 
-// Update list/spinner when in Apps mode.
-// Returns updated model and an aggregated command (if any).
-func (m model) updateAppsLists(msg tea.Msg) (model, tea.Cmd) {
-	var cmds []tea.Cmd
-
-	var lcmd tea.Cmd
-	m.list, lcmd = m.list.Update(msg) // ← arrows/j/k land here
-	if lcmd != nil {
-		cmds = append(cmds, lcmd)
+// createAppsList creates a list component for container apps
+func (m model) createAppsList() list.Model {
+	items := make([]list.Item, len(m.apps))
+	for i, app := range m.apps {
+		items[i] = item(app)
 	}
 
-	// keep your spinner update...
-	m.syncAppsCursorFromList()
+	l := list.New(items, list.NewDefaultDelegate(), 32, m.termH-2)
+	l.Title = "Container Apps"
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(true)
 
-	// fire loads when selection actually changed
-	if m.appsCursor >= 0 && m.appsCursor < len(m.apps) && m.appsCursor != m.lastAppsIndex {
-		m.lastAppsIndex = m.appsCursor
-		m.jsonView.SetContent(m.headerForCurrent() + "\n\nLoading details...")
-		m.revTable.SetRows(nil)
-		cmds = append(cmds, tea.Batch(
-			LoadDetailsCmd(m.apps[m.appsCursor]),
-			LoadRevsCmd(m.apps[m.appsCursor]),
-		))
+	// Set selection based on data model
+	if m.selectedApp >= 0 && m.selectedApp < len(items) {
+		l.Select(m.selectedApp)
 	}
 
-	if len(cmds) > 0 {
-		return m, tea.Batch(cmds...)
-	}
-	return m, nil
+	return l
 }
+
+func (m model) headerForCurrent() string {
+	if len(m.apps) == 0 || m.selectedApp < 0 || m.selectedApp >= len(m.apps) {
+		return ""
+	}
+	curr := m.apps[m.selectedApp]
+	fqdn := curr.IngressFQDN
+	if fqdn == "" {
+		fqdn = "-"
+	}
+	return fmt.Sprintf("Name: %s  |  RG: %s  |  Loc: %s  |  FQDN: %s  |  Latest: %s",
+		curr.Name, curr.ResourceGroup, curr.Location, fqdn, curr.LatestRevision)
+}
+
 func (m model) viewApps() string {
 	if m.loading {
-		return styleTitle.Render("Loading apps… ") + m.spin.View()
+		spinner := m.createSpinner()
+		return styleTitle.Render("Loading apps… ") + spinner.View()
 	}
 	if m.err != nil {
 		return StyleError.Render("Error: ") + m.err.Error() + " Press r to retry or q to quit."
 	}
 
-	left := m.list.View()
+	// Create components from current data
+	appsList := m.createAppsList()
+	detailsView := m.createDetailsView()
+	revisionsTable := m.createRevisionsTable()
+
+	left := appsList.View()
 	right := lipgloss.JoinVertical(
 		lipgloss.Left,
-		styleTitle.Render("Details")+"\n"+m.jsonView.View(),
-		styleTitle.Render("Revisions")+"\n"+m.revTable.View(),
+		styleTitle.Render("Details")+"\n"+detailsView.View(),
+		styleTitle.Render("Revisions")+"\n"+revisionsTable.View(),
 	)
-	help := styleAccent.Render("[enter] revisions  [l] logs  [s] exec  [r] refresh  [R] reload revs  [q] quit  (/ filter)")
+	help := styleAccent.Render("[enter] revisions  [l] logs  [s] exec  [r] refresh  [R] reload revs  [q] quit  (j/k navigate)")
 
 	body := lipgloss.JoinHorizontal(
 		lipgloss.Top,

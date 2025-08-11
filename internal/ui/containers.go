@@ -1,11 +1,9 @@
 package ui
 
 import (
-	"fmt"
-	"os"
-	"os/exec"
-
 	models "az-tui/internal/models"
+	"encoding/json"
+	"fmt"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,7 +22,6 @@ type loadedContainersMsg struct {
 func (m model) handleLoadedContainersMsg(msg loadedContainersMsg) (model, tea.Cmd) {
 	if msg.err != nil {
 		m.ctrs = nil
-		m.ctrList.SetItems([]list.Item{ctrItem{Container: models.Container{Name: "Error", Image: msg.err.Error()}}})
 		return m, nil
 	}
 
@@ -32,33 +29,11 @@ func (m model) handleLoadedContainersMsg(msg loadedContainersMsg) (model, tea.Cm
 	m.containersByRev[revKey(msg.appID, msg.revName)] = msg.ctrs
 	m.ctrs = msg.ctrs
 
-	// build left items
-	items := make([]list.Item, 0, len(m.ctrs))
-	for _, c := range m.ctrs {
-		items = append(items, ctrItem{c})
-	}
-	m.ctrList.SetItems(items)
-
-	// select previous or 0
-	sel := m.ctrCursor
-	if sel < 0 || sel >= len(items) {
-		sel = 0
-	}
-	m.ctrList.Select(sel)
-	m.lastCtrIndex = -1 // force right-pane refresh on first movement
-
-	// render first container details if available
+	// Set initial selection
 	if len(m.ctrs) > 0 {
-		a, ok := m.currentApp()
-		if ok {
-			m.jsonView.SetContent(m.containerHeader(a, msg.revName) + "\n\n" + m.prettyContainerJSON(m.ctrs[sel]))
-		}
-	} else {
-		a, ok := m.currentApp()
-		if ok {
-			m.jsonView.SetContent(m.containerHeader(a, msg.revName) + "\n\nNo containers found.")
-		}
+		m.selectedContainer = 0
 	}
+
 	return m, nil
 }
 
@@ -70,89 +45,59 @@ func (ci ctrItem) FilterValue() string { return ci.Container.Name + " " + ci.Con
 
 func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	switch msg.String() {
+	case "j", "down":
+		if m.selectedContainer < len(m.ctrs)-1 {
+			m.selectedContainer++
+		}
+		return m, nil, true
+	case "k", "up":
+		if m.selectedContainer > 0 {
+			m.selectedContainer--
+		}
+		return m, nil, true
 	case "s":
-		it := m.ctrList.SelectedItem()
-		if it == nil {
+		if len(m.ctrs) == 0 || m.selectedContainer >= len(m.ctrs) {
 			return m, nil, true
 		}
-		ci := it.(ctrItem)
-		a, ok := m.currentApp()
-		if !ok || m.revName == "" {
+		container := m.ctrs[m.selectedContainer]
+		a := m.getCurrentApp()
+		if a.Name == "" || m.currentRevName == "" {
 			return m, nil, true
 		}
 
-		// exec into specific revision + container
-		cmd := exec.Command("az", "containerapp", "exec",
-			"-n", a.Name, "-g", a.ResourceGroup,
-			"--revision", m.revName,
-			"--container", ci.Container.Name,
-			"--command", "/bin/sh",
-		)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		return m, tea.ExecProcess(cmd, func(error) tea.Msg { return noop{} }), true
+		return m, m.azureCommands.ExecIntoContainer(a, m.currentRevName, container.Name), true
 
 	case "l":
-		it := m.ctrList.SelectedItem()
-		if it == nil {
+		if len(m.ctrs) == 0 || m.selectedContainer >= len(m.ctrs) {
 			return m, nil, true
 		}
-		ci := it.(ctrItem)
-		a, ok := m.currentApp()
-		if !ok || m.revName == "" {
+		container := m.ctrs[m.selectedContainer]
+		a := m.getCurrentApp()
+		if a.Name == "" || m.currentRevName == "" {
 			return m, nil, true
 		}
 
-		cmd := exec.Command("az", "containerapp", "logs", "show",
-			"-n", a.Name, "-g", a.ResourceGroup,
-			"--revision", m.revName,
-			"--container", ci.Container.Name,
-			"--follow",
-		)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		fmt.Println("--- Ctrl+C to stop logs ---")
-		return m, tea.ExecProcess(cmd, func(error) tea.Msg { return noop{} }), true
+		return m, m.azureCommands.ShowContainerLogs(a, m.currentRevName, container.Name), true
 
 	case "esc":
-		// remember cursor in this revision context
-		m.ctrCursor = m.ctrList.Index()
-		m.lastCtrIndex = m.ctrCursor
 		m.mode = modeRevs
 		return m, nil, true
 	}
 	return m, nil, false
 }
 
-func (m model) updateContainersList(msg tea.Msg) (model, tea.Cmd) {
-	var cmds []tea.Cmd
-	var lcmd tea.Cmd
-	m.ctrList, lcmd = m.ctrList.Update(msg)
-	if lcmd != nil {
-		cmds = append(cmds, lcmd)
-	}
-
-	// when selection changes, refresh right pane with container details (from m.ctrs)
-	idx := m.ctrList.Index()
-	if idx >= 0 && idx < len(m.ctrs) && idx != m.lastCtrIndex {
-		m.lastCtrIndex = idx
-		a, ok := m.currentApp()
-		if ok {
-			m.jsonView.SetContent(m.containerHeader(a, m.revName) + "\n\n" + m.prettyContainerJSON(m.ctrs[idx]))
-		}
-	}
-
-	if len(cmds) > 0 {
-		return m, tea.Batch(cmds...)
-	}
-	return m, nil
-}
 func (m model) viewContainers() string {
 	if m.err != nil && !m.loading {
 		return StyleError.Render("Error: ") + m.err.Error() + "  [b/esc] back"
 	}
 
-	left := m.ctrList.View()
-	right := styleTitle.Render("Details") + "\n" + m.jsonView.View()
-	help := styleAccent.Render("[enter/e] exec  [l] logs  [r] restart  [b/esc] back  [q] quit  (/ filter)")
+	// Create components from current data
+	containersList := m.createContainersList()
+	detailsView := m.createDetailsView()
+
+	left := containersList.View()
+	right := styleTitle.Render("Details") + "\n" + detailsView.View()
+	help := styleAccent.Render("[s] exec  [l] logs  [r] restart  [b/esc] back  [q] quit  (j/k navigate)")
 
 	body := lipgloss.JoinHorizontal(
 		lipgloss.Top,
@@ -164,4 +109,36 @@ func (m model) viewContainers() string {
 		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
 	}
 	return body
+}
+
+// Component factory methods for containers mode
+
+// createContainersList creates a list component for containers
+func (m model) createContainersList() list.Model {
+	items := make([]list.Item, len(m.ctrs))
+	for i, ctr := range m.ctrs {
+		items[i] = ctrItem{Container: ctr}
+	}
+
+	l := list.New(items, list.NewDefaultDelegate(), 32, m.termH-2)
+	l.Title = fmt.Sprintf("Containers — %s@%s", m.getCurrentAppName(), m.currentRevName)
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(true)
+
+	if m.selectedContainer >= 0 && m.selectedContainer < len(items) {
+		l.Select(m.selectedContainer)
+	}
+
+	return l
+}
+
+// containerHeader returns header information for containers mode
+func (m model) containerHeader(a models.ContainerApp, rev string) string {
+	return fmt.Sprintf("App: %s  |  RG: %s  |  Rev: %s", a.Name, a.ResourceGroup, rev)
+}
+
+// prettyContainerJSON returns formatted JSON for a container
+func (m model) prettyContainerJSON(c models.Container) string {
+	b, _ := json.MarshalIndent(c, "", "  ")
+	return string(b)
 }
