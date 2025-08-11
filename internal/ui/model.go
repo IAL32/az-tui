@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -28,6 +29,19 @@ const (
 	modeResourceGroups
 )
 
+// Context types for switching between different views
+type contextType string
+
+const (
+	contextApps contextType = "apps"
+	contextJobs contextType = "jobs"
+	// Navigation contexts
+	contextResourceGroups contextType = "resource-groups"
+	contextRevisions      contextType = "revisions"
+	contextContainers     contextType = "containers"
+	contextEnvVars        contextType = "env-vars"
+)
+
 // Types
 type ConfirmDialog struct {
 	Visible bool
@@ -39,9 +53,15 @@ type ConfirmDialog struct {
 // Key bindings for different modes
 type keyMap struct {
 	// Navigation
-	Enter key.Binding
-	Back  key.Binding
-	Quit  key.Binding
+	Enter     key.Binding
+	Back      key.Binding
+	Quit      key.Binding
+	Up        key.Binding
+	Down      key.Binding
+	VimUp     key.Binding
+	VimDown   key.Binding
+	UpCombo   key.Binding // Combined up/k binding for help display
+	DownCombo key.Binding // Combined down/j binding for help display
 
 	// Actions
 	Refresh    key.Binding
@@ -54,6 +74,9 @@ type keyMap struct {
 	// Table navigation
 	ScrollLeft  key.Binding
 	ScrollRight key.Binding
+
+	// Context switching
+	ContextSwitch key.Binding
 
 	// Help
 	Help key.Binding
@@ -69,11 +92,23 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Enter, k.Refresh, k.Filter, k.Logs},
 		{k.Exec, k.EnvVars, k.RestartRev, k.Back},
-		{k.ScrollLeft, k.ScrollRight, k.Help, k.Quit},
+		{k.ScrollLeft, k.ScrollRight, k.ContextSwitch, k.Help, k.Quit},
+	}
+}
+
+// ContextHelp returns keybindings for context selection mode
+func (k keyMap) ContextHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Enter, k.Back, k.Help, k.Quit},
 	}
 }
 
 type model struct {
+	// Context management (NEW)
+	context         contextType // Current active context
+	contextList     list.Model  // List component for context selection
+	showContextList bool        // Whether context list is visible
+
 	// Pure data - no UI components
 	apps           []models.ContainerApp
 	revs           []models.Revision
@@ -148,6 +183,10 @@ func InitialModel(useMockMode bool) model {
 	}
 
 	m := model{
+		// Context management (NEW)
+		context:         contextApps, // Default to apps
+		showContextList: false,
+
 		// Pure data
 		apps:           nil,
 		revs:           nil,
@@ -181,6 +220,9 @@ func InitialModel(useMockMode bool) model {
 		dataProvider:    dataProvider,
 		commandProvider: createCommandProvider(useMockMode),
 	}
+
+	// Initialize context list using the dedicated method
+	m.contextList = m.createContextList()
 
 	// Initialize empty tables
 	m.appsTable = m.createAppsTable()
@@ -222,6 +264,30 @@ func InitialModel(useMockMode bool) model {
 			key.WithKeys("q", "ctrl+c"),
 			key.WithHelp("q", "quit"),
 		),
+		Up: key.NewBinding(
+			key.WithKeys("up"),
+			key.WithHelp("↑", "up"),
+		),
+		Down: key.NewBinding(
+			key.WithKeys("down"),
+			key.WithHelp("↓", "down"),
+		),
+		VimUp: key.NewBinding(
+			key.WithKeys("k"),
+			key.WithHelp("k", "up"),
+		),
+		VimDown: key.NewBinding(
+			key.WithKeys("j"),
+			key.WithHelp("j", "down"),
+		),
+		UpCombo: key.NewBinding(
+			key.WithKeys("up", "k"),
+			key.WithHelp("↑/k", "up"),
+		),
+		DownCombo: key.NewBinding(
+			key.WithKeys("down", "j"),
+			key.WithHelp("↓/j", "down"),
+		),
 		Refresh: key.NewBinding(
 			key.WithKeys("r"),
 			key.WithHelp("r", "refresh"),
@@ -253,6 +319,10 @@ func InitialModel(useMockMode bool) model {
 		ScrollRight: key.NewBinding(
 			key.WithKeys("shift+right"),
 			key.WithHelp("shift+→", "scroll right"),
+		),
+		ContextSwitch: key.NewBinding(
+			key.WithKeys(":"),
+			key.WithHelp(":", "switch context"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
