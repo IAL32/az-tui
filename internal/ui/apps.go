@@ -48,9 +48,31 @@ func (m model) handleLoadedAppsMsg(msg loadedAppsMsg) (model, tea.Cmd) {
 
 // Key handlers
 func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
+	// Handle filter input when focused
+	if m.appsFilterInput.Focused() {
+		switch msg.String() {
+		case "enter":
+			m.appsFilterInput.Blur()
+			return m, nil, true
+		case "esc":
+			m.appsFilterInput.SetValue("")
+			m.appsFilterInput.Blur()
+			m.appsTable = m.appsTable.WithFilterInput(m.appsFilterInput)
+			return m, nil, true
+		default:
+			var cmd tea.Cmd
+			m.appsFilterInput, cmd = m.appsFilterInput.Update(msg)
+			m.appsTable = m.appsTable.WithFilterInput(m.appsFilterInput)
+			return m, cmd, true
+		}
+	}
+
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit, true
+	case "/":
+		m.appsFilterInput.Focus()
+		return m, nil, true
 	case "enter":
 		if len(m.apps) == 0 {
 			return m, nil, true

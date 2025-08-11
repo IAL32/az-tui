@@ -87,9 +87,31 @@ func (m model) handleRevisionRestartedMsg(msg revisionRestartedMsg) (model, tea.
 
 // Key handlers
 func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
+	// Handle filter input when focused
+	if m.revisionsFilterInput.Focused() {
+		switch msg.String() {
+		case "enter":
+			m.revisionsFilterInput.Blur()
+			return m, nil, true
+		case "esc":
+			m.revisionsFilterInput.SetValue("")
+			m.revisionsFilterInput.Blur()
+			m.revisionsTable = m.revisionsTable.WithFilterInput(m.revisionsFilterInput)
+			return m, nil, true
+		default:
+			var cmd tea.Cmd
+			m.revisionsFilterInput, cmd = m.revisionsFilterInput.Update(msg)
+			m.revisionsTable = m.revisionsTable.WithFilterInput(m.revisionsFilterInput)
+			return m, cmd, true
+		}
+	}
+
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit, true
+	case "/":
+		m.revisionsFilterInput.Focus()
+		return m, nil, true
 	case "enter":
 		if len(m.revs) == 0 {
 			return m, nil, true

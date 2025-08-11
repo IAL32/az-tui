@@ -59,9 +59,31 @@ func (m model) handleLoadedContainersMsg(msg loadedContainersMsg) (model, tea.Cm
 
 // Key handlers
 func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
+	// Handle filter input when focused
+	if m.containersFilterInput.Focused() {
+		switch msg.String() {
+		case "enter":
+			m.containersFilterInput.Blur()
+			return m, nil, true
+		case "esc":
+			m.containersFilterInput.SetValue("")
+			m.containersFilterInput.Blur()
+			m.containersTable = m.containersTable.WithFilterInput(m.containersFilterInput)
+			return m, nil, true
+		default:
+			var cmd tea.Cmd
+			m.containersFilterInput, cmd = m.containersFilterInput.Update(msg)
+			m.containersTable = m.containersTable.WithFilterInput(m.containersFilterInput)
+			return m, cmd, true
+		}
+	}
+
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit, true
+	case "/":
+		m.containersFilterInput.Focus()
+		return m, nil, true
 	case "r":
 		// Refresh containers list - clear data and show loading state
 		a := m.getCurrentApp()

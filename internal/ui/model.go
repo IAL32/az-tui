@@ -6,6 +6,7 @@ import (
 
 	models "az-tui/internal/models"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/evertras/bubble-table/table"
 )
@@ -37,6 +38,11 @@ type model struct {
 	appsTable       table.Model
 	revisionsTable  table.Model
 	containersTable table.Model
+
+	// Filter text inputs for each mode
+	appsFilterInput       textinput.Model
+	revisionsFilterInput  textinput.Model
+	containersFilterInput textinput.Model
 
 	// Context for navigation
 	currentAppID   string // When viewing revisions
@@ -106,6 +112,14 @@ func InitialModel() model {
 	m.appsTable = m.createAppsTable()
 	m.revisionsTable = m.createRevisionsTable()
 	m.containersTable = m.createContainersTable()
+
+	// Initialize filter text inputs
+	m.appsFilterInput = textinput.New()
+	m.appsFilterInput.Placeholder = "Filter apps..."
+	m.revisionsFilterInput = textinput.New()
+	m.revisionsFilterInput.Placeholder = "Filter revisions..."
+	m.containersFilterInput = textinput.New()
+	m.containersFilterInput.Placeholder = "Filter containers..."
 
 	return m
 }

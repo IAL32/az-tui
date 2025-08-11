@@ -46,17 +46,17 @@ func (m model) createAppsTable() table.Model {
 	}
 
 	columns := []table.Column{
-		table.NewColumn(columnKeyAppName, "Name", nameWidth),         // Dynamic width based on content
-		table.NewColumn(columnKeyAppRG, "Resource Group", rgWidth),   // Dynamic width based on content
-		table.NewColumn(columnKeyAppLocation, "Location", 15),        // Fixed width
-		table.NewColumn(columnKeyAppStatus, "Status", 12),            // Fixed width
-		table.NewColumn(columnKeyAppReplicas, "Replicas", 10),        // Fixed width
-		table.NewColumn(columnKeyAppResources, "Resources", 12),      // Fixed width
-		table.NewColumn(columnKeyAppIngress, "Ingress", 18),          // Fixed width
-		table.NewColumn(columnKeyAppIdentity, "Identity", 15),        // Fixed width
-		table.NewColumn(columnKeyAppWorkload, "Workload", 15),        // Fixed width
-		table.NewColumn(columnKeyAppRevision, "Latest Revision", 30), // Fixed width
-		table.NewColumn(columnKeyAppFQDN, "FQDN", 60),                // Fixed width (longest content)
+		table.NewColumn(columnKeyAppName, "Name", nameWidth).WithFiltered(true),       // Dynamic width based on content
+		table.NewColumn(columnKeyAppRG, "Resource Group", rgWidth).WithFiltered(true), // Dynamic width based on content
+		table.NewColumn(columnKeyAppLocation, "Location", 15).WithFiltered(true),      // Fixed width
+		table.NewColumn(columnKeyAppStatus, "Status", 12).WithFiltered(true),          // Fixed width
+		table.NewColumn(columnKeyAppReplicas, "Replicas", 10),                         // Fixed width
+		table.NewColumn(columnKeyAppResources, "Resources", 12),                       // Fixed width
+		table.NewColumn(columnKeyAppIngress, "Ingress", 18),                           // Fixed width
+		table.NewColumn(columnKeyAppIdentity, "Identity", 15),                         // Fixed width
+		table.NewColumn(columnKeyAppWorkload, "Workload", 15),                         // Fixed width
+		table.NewColumn(columnKeyAppRevision, "Latest Revision", 30),                  // Fixed width
+		table.NewColumn(columnKeyAppFQDN, "FQDN", 60),                                 // Fixed width (longest content)
 	}
 
 	var rows []table.Row
@@ -154,6 +154,8 @@ func (m model) createAppsTable() table.Model {
 			BorderForeground(lipgloss.Color("#a38"))).
 		WithMaxTotalWidth(m.termW).
 		WithHorizontalFreezeColumnCount(1).
+		Filtered(true).
+		WithFilterInput(m.appsFilterInput).
 		Focused(true)
 
 	// Calculate height: total height - title (1) - help (1) - status (1) - margins (2)
@@ -184,17 +186,17 @@ func (m model) createRevisionsTable() table.Model {
 	}
 
 	columns := []table.Column{
-		table.NewColumn(columnKeyRevName, "Revision", revisionWidth), // Dynamic width based on content
-		table.NewColumn(columnKeyRevActive, "Active", 8),             // Fixed width
-		table.NewColumn(columnKeyRevTraffic, "Traffic", 10),          // Fixed width
-		table.NewColumn(columnKeyRevReplicas, "Replicas", 10),        // Fixed width
-		table.NewColumn(columnKeyRevScaling, "Scaling", 12),          // Fixed width
-		table.NewColumn(columnKeyRevResources, "Resources", 15),      // Fixed width
-		table.NewColumn(columnKeyRevHealth, "Health", 12),            // Fixed width
-		table.NewColumn(columnKeyRevRunning, "Running", 15),          // Fixed width
-		table.NewColumn(columnKeyRevCreated, "Created", 20),          // Fixed width
-		table.NewColumn(columnKeyRevStatus, "Status", 15),            // Fixed width
-		table.NewColumn(columnKeyRevFQDN, "FQDN", 60),                // Fixed width (longest content)
+		table.NewColumn(columnKeyRevName, "Revision", revisionWidth).WithFiltered(true), // Dynamic width based on content
+		table.NewColumn(columnKeyRevActive, "Active", 8),                                // Fixed width
+		table.NewColumn(columnKeyRevTraffic, "Traffic", 10),                             // Fixed width
+		table.NewColumn(columnKeyRevReplicas, "Replicas", 10),                           // Fixed width
+		table.NewColumn(columnKeyRevScaling, "Scaling", 12),                             // Fixed width
+		table.NewColumn(columnKeyRevResources, "Resources", 15),                         // Fixed width
+		table.NewColumn(columnKeyRevHealth, "Health", 12).WithFiltered(true),            // Fixed width
+		table.NewColumn(columnKeyRevRunning, "Running", 15).WithFiltered(true),          // Fixed width
+		table.NewColumn(columnKeyRevCreated, "Created", 20),                             // Fixed width
+		table.NewColumn(columnKeyRevStatus, "Status", 15).WithFiltered(true),            // Fixed width
+		table.NewColumn(columnKeyRevFQDN, "FQDN", 60),                                   // Fixed width (longest content)
 	}
 
 	var rows []table.Row
@@ -297,6 +299,8 @@ func (m model) createRevisionsTable() table.Model {
 			BorderForeground(lipgloss.Color("#a38"))).
 		WithMaxTotalWidth(m.termW).
 		WithHorizontalFreezeColumnCount(1).
+		Filtered(true).
+		WithFilterInput(m.revisionsFilterInput).
 		Focused(true)
 
 	// Only sort if we have actual data
@@ -332,15 +336,15 @@ func (m model) createContainersTable() table.Model {
 	}
 
 	columns := []table.Column{
-		table.NewColumn(columnKeyCtrName, "Container", containerWidth), // Dynamic width based on content
-		table.NewColumn(columnKeyCtrStatus, "Status", 10),              // Fixed width - moved to second position
-		table.NewColumn(columnKeyCtrImage, "Image", 50),                // Fixed width (longest content)
-		table.NewColumn(columnKeyCtrCommand, "Command", 25),            // Fixed width
-		table.NewColumn(columnKeyCtrArgs, "Args", 25),                  // Fixed width
-		table.NewColumn(columnKeyCtrResources, "Resources", 15),        // Fixed width
-		table.NewColumn(columnKeyCtrEnvCount, "Env", 8),                // Fixed width
-		table.NewColumn(columnKeyCtrProbes, "Probes", 12),              // Fixed width
-		table.NewColumn(columnKeyCtrVolumes, "Volumes", 10),            // Fixed width
+		table.NewColumn(columnKeyCtrName, "Container", containerWidth).WithFiltered(true), // Dynamic width based on content
+		table.NewColumn(columnKeyCtrStatus, "Status", 10).WithFiltered(true),              // Fixed width - moved to second position
+		table.NewColumn(columnKeyCtrImage, "Image", 50).WithFiltered(true),                // Fixed width (longest content)
+		table.NewColumn(columnKeyCtrCommand, "Command", 25),                               // Fixed width
+		table.NewColumn(columnKeyCtrArgs, "Args", 25),                                     // Fixed width
+		table.NewColumn(columnKeyCtrResources, "Resources", 15),                           // Fixed width
+		table.NewColumn(columnKeyCtrEnvCount, "Env", 8),                                   // Fixed width
+		table.NewColumn(columnKeyCtrProbes, "Probes", 12),                                 // Fixed width
+		table.NewColumn(columnKeyCtrVolumes, "Volumes", 10),                               // Fixed width
 	}
 
 	var rows []table.Row
@@ -418,6 +422,8 @@ func (m model) createContainersTable() table.Model {
 			BorderForeground(lipgloss.Color("#a38"))).
 		WithMaxTotalWidth(m.termW).
 		WithHorizontalFreezeColumnCount(1).
+		Filtered(true).
+		WithFilterInput(m.containersFilterInput).
 		Focused(true)
 
 	// Calculate height: total height - title (1) - help (1) - status (1) - margins (2)
@@ -479,7 +485,21 @@ func (m model) createStatusBar() string {
 
 	// Status indicator
 	var statusIndicator string
-	if m.loading {
+	var filterActive bool
+
+	// Check if any filter input is focused
+	switch m.mode {
+	case modeApps:
+		filterActive = m.appsFilterInput.Focused()
+	case modeRevs:
+		filterActive = m.revisionsFilterInput.Focused()
+	case modeContainers:
+		filterActive = m.containersFilterInput.Focused()
+	}
+
+	if filterActive {
+		statusIndicator = statusLoadingStyle.Render("Filtering")
+	} else if m.loading {
 		spinner := m.createSpinner()
 		statusIndicator = statusLoadingStyle.Render("Loading " + spinner.View())
 	} else if m.err != nil {
@@ -591,11 +611,11 @@ func (m model) createHelpBar() string {
 	var helpText string
 	switch m.mode {
 	case modeApps:
-		helpText = "[enter] revisions  [l] logs  [s] exec  [r] refresh  [shift+←/→] scroll  [q] quit"
+		helpText = "[enter] revisions  [l] logs  [s] exec  [r] refresh  [/] filter  [shift+←/→] scroll  [q] quit"
 	case modeRevs:
-		helpText = "[enter] containers  [s] exec  [l] logs  [r] refresh  [R] restart revision  [shift+←/→] scroll  [esc] back  [q] quit"
+		helpText = "[enter] containers  [s] exec  [l] logs  [r] refresh  [R] restart revision  [/] filter  [shift+←/→] scroll  [esc] back  [q] quit"
 	case modeContainers:
-		helpText = "[s] exec  [l] logs  [r] refresh  [shift+←/→] scroll  [esc] back  [q] quit"
+		helpText = "[s] exec  [l] logs  [r] refresh  [/] filter  [shift+←/→] scroll  [esc] back  [q] quit"
 	}
 	return styleAccent.Render(helpText)
 }
