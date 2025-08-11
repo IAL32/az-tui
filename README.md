@@ -23,7 +23,26 @@ Az-TUI is a **terminal-based user interface (TUI)** for managing Azure Container
 - `Esc` – Go back (in nested views)
 - `Enter` – Select/drill down
 - `?` – Toggle help
+- `:` – Context switching (VIM/k9s-like navigation)
 - `Shift+←` / `Shift+→` – Scroll table left/right
+
+### Context Switching
+
+Az-TUI now supports **VIM/k9s-like context switching** for quick navigation between different views:
+
+- Press `:` to open the context selection menu
+- Use `↑`/`k` and `↓`/`j` to navigate between available contexts
+- Press `Enter` to switch to the selected context
+- Press `Esc` to cancel context switching
+
+**Context behavior:**
+- **From Resource Groups**: Switch to Container Apps or Jobs (preserves or clears resource group selection)
+- **From Container Apps**: Switch between Apps and Jobs (preserves current resource group)
+- **From Revisions**: Stay in Revisions view (preserves resource group and app selection)
+- **From Containers**: Stay in Containers view (preserves all current selections)
+- **From Environment Variables**: Stay in Env Vars view (preserves all selections)
+
+The context menu shows only relevant navigation options for your current mode and automatically preserves your selection state when switching contexts.
 
 ### Resource Groups Mode
 
@@ -122,12 +141,14 @@ Navigate with arrow keys or `j`/`k`, drill down with `Enter`, and use the key bi
 Az-TUI uses the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework:
 
 - **Modes:** `resource groups` → `apps` → `revisions` → `containers` → `environment variables`
+- **Context switching:** VIM/k9s-like navigation system with `:` key for quick mode switching
 - **Data providers:** Pluggable architecture supporting both Azure CLI and mock data sources
 - **Azure CLI integration:** Fetches data using `az containerapp` and `az group` commands
 - **Mock data system:** JSON-based mock data for development and testing
 - **UI Components:** Bubble Table for data display with filtering and navigation
 - **Asynchronous updates:** Commands run in background and update the model via messages
 - **Help system:** Built-in help with `?` key showing context-sensitive keybindings
+- **State preservation:** Context switching maintains current selections across mode changes
 
 ## Roadmap
 
