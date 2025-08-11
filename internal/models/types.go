@@ -71,3 +71,10 @@ func (ri RevItem) Description() string {
 	return ""
 }
 func (ri RevItem) FilterValue() string { return ri.Name }
+
+type ResourceGroup struct {
+	Name     string            `json:"name"`
+	Location string            `json:"location"`
+	State    string            `json:"provisioningState"`
+	Tags     map[string]string `json:"tags"`
+}

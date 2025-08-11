@@ -31,6 +31,15 @@ func LoadRevsCmd(a m.ContainerApp) tea.Cmd {
 	}
 }
 
+func LoadResourceGroupsCmd() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		resourceGroups, err := azure.ListResourceGroups(ctx)
+		return loadedResourceGroupsMsg{resourceGroups, err}
+	}
+}
+
 func LoadContainersCmd(a m.ContainerApp, revName string) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

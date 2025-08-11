@@ -8,6 +8,8 @@ func (m model) View() string {
 		return m.viewRevs()
 	case modeEnvVars:
 		return m.viewEnvVars()
+	case modeResourceGroups:
+		return m.viewResourceGroups()
 	default:
 		return m.viewApps()
 	}

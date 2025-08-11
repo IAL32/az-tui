@@ -158,6 +158,7 @@ func (m model) getAppsHelpKeys() keyMap {
 		ScrollLeft:  m.keys.ScrollLeft,
 		ScrollRight: m.keys.ScrollRight,
 		Help:        m.keys.Help,
+		Back:        m.keys.Back,
 		Quit:        m.keys.Quit,
 	}
 }
@@ -316,6 +317,14 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		}
 
 		return m, m.azureCommands.ExecIntoApp(selectedApp), true
+
+	case "esc":
+		// Go back to resource groups mode
+		m.mode = modeResourceGroups
+		m.loading = true
+		m.resourceGroups = nil
+		m.resourceGroupsTable = m.createResourceGroupsTable()
+		return m, LoadResourceGroupsCmd(), true
 	}
 
 	return m, nil, false

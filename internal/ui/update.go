@@ -43,6 +43,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if nm, cmd, handled := m.handleEnvVarsKey(msg); handled {
 				return nm, cmd
 			}
+		case modeResourceGroups:
+			if nm, cmd, handled := m.handleResourceGroupsKey(msg); handled {
+				return nm, cmd
+			}
 		}
 
 		// Handle table navigation for unhandled keys
@@ -56,6 +60,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.containersTable, cmd = m.containersTable.Update(msg)
 		case modeEnvVars:
 			m.envVarsTable, cmd = m.envVarsTable.Update(msg)
+		case modeResourceGroups:
+			m.resourceGroupsTable, cmd = m.resourceGroupsTable.Update(msg)
 		}
 
 		if cmd != nil {
@@ -79,6 +85,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case revisionRestartedMsg:
 		return m.handleRevisionRestartedMsg(msg)
+
+	case loadedResourceGroupsMsg:
+		return m.handleLoadedResourceGroupsMsg(msg)
 
 	default:
 		// Handle spinner updates

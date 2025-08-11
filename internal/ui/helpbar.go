@@ -14,6 +14,8 @@ func (m model) createHelpBar() string {
 		modeKeys = m.getContainersHelpKeys()
 	case modeEnvVars:
 		modeKeys = m.getEnvVarsHelpKeys()
+	case modeResourceGroups:
+		modeKeys = m.getResourceGroupsHelpKeys()
 	default:
 		modeKeys = m.keys
 	}

@@ -23,6 +23,7 @@ const (
 	modeRevs
 	modeContainers
 	modeEnvVars
+	modeResourceGroups
 )
 
 // Types
@@ -72,21 +73,24 @@ func (k keyMap) FullHelp() [][]key.Binding {
 
 type model struct {
 	// Pure data - no UI components
-	apps []models.ContainerApp
-	revs []models.Revision
-	ctrs []models.Container
+	apps           []models.ContainerApp
+	revs           []models.Revision
+	ctrs           []models.Container
+	resourceGroups []models.ResourceGroup
 
 	// Table components for each mode
-	appsTable       table.Model
-	revisionsTable  table.Model
-	containersTable table.Model
-	envVarsTable    table.Model
+	appsTable           table.Model
+	revisionsTable      table.Model
+	containersTable     table.Model
+	envVarsTable        table.Model
+	resourceGroupsTable table.Model
 
 	// Filter text inputs for each mode
-	appsFilterInput       textinput.Model
-	revisionsFilterInput  textinput.Model
-	containersFilterInput textinput.Model
-	envVarsFilterInput    textinput.Model
+	appsFilterInput           textinput.Model
+	revisionsFilterInput      textinput.Model
+	containersFilterInput     textinput.Model
+	envVarsFilterInput        textinput.Model
+	resourceGroupsFilterInput textinput.Model
 
 	// Help system
 	help help.Model
@@ -129,9 +133,10 @@ type noop struct{}
 func InitialModel() model {
 	m := model{
 		// Pure data
-		apps: nil,
-		revs: nil,
-		ctrs: nil,
+		apps:           nil,
+		revs:           nil,
+		ctrs:           nil,
+		resourceGroups: nil,
 
 		// Context for navigation
 		currentAppID:   "",
@@ -141,7 +146,7 @@ func InitialModel() model {
 		containersByRev: make(map[string][]models.Container),
 
 		// App state
-		mode:    modeApps,
+		mode:    modeResourceGroups, // Start with resource groups mode
 		loading: true,
 		err:     nil,
 
@@ -165,6 +170,7 @@ func InitialModel() model {
 	m.revisionsTable = m.createRevisionsTable()
 	m.containersTable = m.createContainersTable()
 	m.envVarsTable = m.createEnvVarsTable()
+	m.resourceGroupsTable = m.createResourceGroupsTable()
 
 	// Initialize filter text inputs
 	m.appsFilterInput = textinput.New()
@@ -175,6 +181,8 @@ func InitialModel() model {
 	m.containersFilterInput.Placeholder = "Filter containers..."
 	m.envVarsFilterInput = textinput.New()
 	m.envVarsFilterInput.Placeholder = "Filter environment variables..."
+	m.resourceGroupsFilterInput = textinput.New()
+	m.resourceGroupsFilterInput.Placeholder = "Filter resource groups..."
 
 	// Initialize help system
 	m.help = help.New()
@@ -239,7 +247,7 @@ func InitialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(LoadAppsCmd(m.rg), m.spinner.Tick)
+	return tea.Batch(LoadResourceGroupsCmd(), m.spinner.Tick)
 }
 
 // Helper functions

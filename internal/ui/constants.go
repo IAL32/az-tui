@@ -47,6 +47,14 @@ const (
 	columnKeyCtrStatus    = "status"
 )
 
+// Table column keys for Resource Groups mode
+const (
+	columnKeyRGName     = "name"
+	columnKeyRGLocation = "location"
+	columnKeyRGState    = "state"
+	columnKeyRGTags     = "tags"
+)
+
 // Message types for different operations
 type loadedAppsMsg struct {
 	apps []models.ContainerApp
@@ -70,4 +78,9 @@ type revisionRestartedMsg struct {
 	revName string
 	err     error
 	out     string
+}
+
+type loadedResourceGroupsMsg struct {
+	resourceGroups []models.ResourceGroup
+	err            error
 }

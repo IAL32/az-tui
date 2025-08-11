@@ -171,3 +171,21 @@ func ListContainersCmd(ctx context.Context, ct m.ContainerApp, revName string) (
 	}
 	return cs, nil
 }
+
+func ListResourceGroups(ctx context.Context) ([]m.ResourceGroup, error) {
+	q := `[].{
+		name:name,
+		location:location,
+		provisioningState:properties.provisioningState,
+		tags:tags
+	}`
+	raw, err := RunAz(ctx, "group", "list", "-o", "json", "--query", q)
+	if err != nil {
+		return nil, err
+	}
+	var rgs []m.ResourceGroup
+	if err := json.Unmarshal([]byte(raw), &rgs); err != nil {
+		return nil, err
+	}
+	return rgs, nil
+}
