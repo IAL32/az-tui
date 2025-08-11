@@ -60,7 +60,8 @@ go build -o az-tui cmd/az-tui/main.go
 Or install directly:
 
 ```bash
-go install github.com/IAL32/az-tui/cmd/az-tui@latest
+go install github.com/IAL32/az-tui/cmd/az-tui@v0.1.1
+az-tui --version
 ```
 
 ## Usage
