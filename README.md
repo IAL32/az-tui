@@ -2,6 +2,8 @@
 
 Az-TUI is a **terminal-based user interface (TUI)** for managing Azure Container Apps, inspired by tools like K9s. It allows you to browse your Container Apps, inspect details and revisions, and access container logs or shells, all from within a single terminal UI.
 
+![Demo](demo.gif)
+
 ## Features
 
 - **Browse Azure Container Apps** across your subscription (or limit to a resource group via `ACA_RG`).
