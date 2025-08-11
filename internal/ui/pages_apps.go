@@ -6,27 +6,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Table column keys for Apps mode
-const (
-	columnKeyAppName      = "name"
-	columnKeyAppRG        = "rg"
-	columnKeyAppLocation  = "location"
-	columnKeyAppRevision  = "revision"
-	columnKeyAppFQDN      = "fqdn"
-	columnKeyAppStatus    = "status"
-	columnKeyAppReplicas  = "replicas"
-	columnKeyAppResources = "resources"
-	columnKeyAppIngress   = "ingress"
-	columnKeyAppIdentity  = "identity"
-	columnKeyAppWorkload  = "workload"
-)
-
-// App-related messages
-type loadedAppsMsg struct {
-	apps []models.ContainerApp
-	err  error
-}
-
 // Message handlers
 func (m model) handleLoadedAppsMsg(msg loadedAppsMsg) (model, tea.Cmd) {
 	m.loading = false

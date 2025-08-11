@@ -8,34 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Table column keys for Revisions mode
-const (
-	columnKeyRevName      = "name"
-	columnKeyRevActive    = "active"
-	columnKeyRevTraffic   = "traffic"
-	columnKeyRevCreated   = "created"
-	columnKeyRevStatus    = "status"
-	columnKeyRevReplicas  = "replicas"
-	columnKeyRevScaling   = "scaling"
-	columnKeyRevResources = "resources"
-	columnKeyRevHealth    = "health"
-	columnKeyRevRunning   = "running"
-	columnKeyRevFQDN      = "fqdn"
-)
-
-// Revision-related messages
-type loadedRevsMsg struct {
-	revs []models.Revision
-	err  error
-}
-
-type revisionRestartedMsg struct {
-	appID   string
-	revName string
-	err     error
-	out     string
-}
-
 // Navigation functions
 func (m *model) enterRevsFor(a models.ContainerApp) tea.Cmd {
 	m.mode = modeRevs

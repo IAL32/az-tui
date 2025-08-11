@@ -8,8 +8,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
 )
 
@@ -87,6 +89,9 @@ type model struct {
 	// Help system
 	help help.Model
 	keys keyMap
+
+	// Loading spinner
+	spinner spinner.Model
 
 	// Context for navigation
 	currentAppID         string // When viewing revisions
@@ -171,6 +176,12 @@ func InitialModel() model {
 
 	// Initialize help system
 	m.help = help.New()
+
+	// Initialize spinner
+	m.spinner = spinner.New()
+	m.spinner.Spinner = spinner.Dot
+	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
 	m.keys = keyMap{
 		Enter: key.NewBinding(
 			key.WithKeys("enter"),
@@ -222,7 +233,7 @@ func InitialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return LoadAppsCmd(m.rg)
+	return tea.Batch(LoadAppsCmd(m.rg), m.spinner.Tick)
 }
 
 // Helper functions

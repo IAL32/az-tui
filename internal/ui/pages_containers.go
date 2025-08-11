@@ -6,19 +6,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Table column keys for Containers mode
-const (
-	columnKeyCtrName      = "name"
-	columnKeyCtrImage     = "image"
-	columnKeyCtrCommand   = "command"
-	columnKeyCtrArgs      = "args"
-	columnKeyCtrResources = "resources"
-	columnKeyCtrEnvCount  = "envcount"
-	columnKeyCtrProbes    = "probes"
-	columnKeyCtrVolumes   = "volumes"
-	columnKeyCtrStatus    = "status"
-)
-
 // Navigation functions
 func (m *model) leaveContainers() {
 	m.mode = modeRevs
@@ -27,14 +14,6 @@ func (m *model) leaveContainers() {
 	// Clear containers state
 	m.ctrs = nil
 	m.containersTable = m.createContainersTable()
-}
-
-// Container-related messages
-type loadedContainersMsg struct {
-	appID   string
-	revName string
-	ctrs    []models.Container
-	err     error
 }
 
 // Message handlers
