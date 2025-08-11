@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	m "az-tui/internal/models"
+	m "github.com/IAL32/az-tui/internal/models"
 )
 
 func RunAz(ctx context.Context, args ...string) (string, error) {

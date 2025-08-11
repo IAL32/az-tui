@@ -1,4 +1,4 @@
-module az-tui
+module github.com/IAL32/az-tui
 
 go 1.24.6
 

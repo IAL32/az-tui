@@ -1,9 +1,10 @@
 package ui
 
 import (
-	models "az-tui/internal/models"
 	"fmt"
 	"strings"
+
+	models "github.com/IAL32/az-tui/internal/models"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

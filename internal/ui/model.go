@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	models "az-tui/internal/models"
+	models "github.com/IAL32/az-tui/internal/models"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"

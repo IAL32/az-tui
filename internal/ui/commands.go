@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	models "az-tui/internal/models"
+	models "github.com/IAL32/az-tui/internal/models"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

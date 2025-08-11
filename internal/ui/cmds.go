@@ -5,8 +5,9 @@ import (
 	"os/exec"
 	"time"
 
-	azure "az-tui/internal/azure"
-	m "az-tui/internal/models"
+	m "github.com/IAL32/az-tui/internal/models"
+
+	azure "github.com/IAL32/az-tui/internal/azure"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

@@ -1,8 +1,9 @@
 package ui
 
 import (
-	models "az-tui/internal/models"
 	"strings"
+
+	models "github.com/IAL32/az-tui/internal/models"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"

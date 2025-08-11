@@ -3,7 +3,7 @@ package ui
 import (
 	"fmt"
 
-	models "az-tui/internal/models"
+	models "github.com/IAL32/az-tui/internal/models"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
