@@ -34,3 +34,4 @@ go.work.sum
 # Build
 az-tui
 !cmd/az-tui
+dist/

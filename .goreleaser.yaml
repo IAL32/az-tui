@@ -1,0 +1,86 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: az-tui
+    main: ./cmd/az-tui
+    binary: az-tui
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X az-tui/internal/build.Version={{.Version}}
+      - -X az-tui/internal/build.Commit={{.Commit}}
+      - -X az-tui/internal/build.Date={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: az-tui-archives
+    # use the build ids instead of 'builds:'
+    ids: [az-tui]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # 'format_overrides.format' -> 'format_overrides.formats'
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs?:"
+      - "^chore:"
+      - "^test:"
+      - "^ci:"
+
+release:
+  draft: false
+  prerelease: auto
+  github:
+    owner: IAL32
+    name: az-tui
+
+# 'brews' is deprecated; use 'homebrew_casks'
+homebrew_casks:
+  - name: az-tui
+    # ids: [az-tui-archives]   # or omit to include all archives
+    repository:
+      owner: IAL32
+      name: homebrew-tap
+      # token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"   # if cross-repo push from CI
+    description: "A fast, keyboard-first TUI for Azure Container Apps."
+    homepage: "https://github.com/IAL32/az-tui"
+    license: "MIT"
+    url:
+      template: "https://github.com/IAL32/az-tui/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+
+# Optional: Scoop (note 'repository' not 'bucket')
+# scoops:
+#   - name: az-tui
+#     ids: [az-tui]
+#     repository:
+#       owner: IAL32
+#       name: scoop-bucket
+#     commit_author:
+#       name: goreleaserbot
+#       email: bot@goreleaser.com
+#     homepage: "https://github.com/IAL32/az-tui"
+#     description: "A fast, keyboard-first TUI for Azure Container Apps."
+#     license: "MIT"
+
+# snapshots: 'name_template' -> 'version_template'
+snapshot:
+  version_template: "{{ .Tag }}-SNAPSHOT-{{ .ShortCommit }}"
