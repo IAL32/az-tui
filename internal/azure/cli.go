@@ -71,7 +71,21 @@ func GetAppDetails(ctx context.Context, name, rg string) (string, error) {
 }
 
 func ListRevisions(ctx context.Context, name string, rg string) ([]m.Revision, error) {
-	q := "[].{name:name, active:properties.active, traffic:(properties.trafficWeight||`0`)}"
+	q := `[].{
+		name:name,
+		active:properties.active,
+		traffic:(properties.trafficWeight||` + "`0`" + `),
+		createdAt:properties.createdTime,
+		fqdn:properties.fqdn,
+		replicas:properties.replicas,
+		healthState:properties.healthState,
+		provisioningState:properties.provisioningState,
+		runningState:properties.runningState,
+		minReplicas:properties.template.scale.minReplicas,
+		maxReplicas:properties.template.scale.maxReplicas,
+		cpu:properties.template.containers[0].resources.cpu,
+		memory:properties.template.containers[0].resources.memory
+	}`
 	raw, err := RunAz(ctx, "containerapp", "revision", "list", "-n", name, "-g", rg, "-o", "json", "--query", q)
 	if err != nil {
 		return nil, err
@@ -90,15 +104,30 @@ func ListContainersCmd(ctx context.Context, ct m.ContainerApp, revName string) (
 		return nil, err
 	}
 
-	// Parse containers
+	// Parse containers with enhanced data
 	var resp struct {
 		Properties struct {
 			Template struct {
 				Containers []struct {
-					Name    string   `json:"name"`
-					Image   string   `json:"image"`
-					Command []string `json:"command"`
-					Args    []string `json:"args"`
+					Name      string   `json:"name"`
+					Image     string   `json:"image"`
+					Command   []string `json:"command"`
+					Args      []string `json:"args"`
+					Resources struct {
+						CPU    float64 `json:"cpu"`
+						Memory string  `json:"memory"`
+					} `json:"resources"`
+					Env []struct {
+						Name  string `json:"name"`
+						Value string `json:"value"`
+					} `json:"env"`
+					Probes []struct {
+						Type string `json:"type"`
+					} `json:"probes"`
+					VolumeMounts []struct {
+						MountPath  string `json:"mountPath"`
+						VolumeName string `json:"volumeName"`
+					} `json:"volumeMounts"`
 				} `json:"containers"`
 			} `json:"template"`
 		} `json:"properties"`
@@ -106,9 +135,39 @@ func ListContainersCmd(ctx context.Context, ct m.ContainerApp, revName string) (
 	if jerr := json.Unmarshal([]byte(raw), &resp); jerr != nil {
 		return nil, jerr
 	}
+
 	cs := make([]m.Container, 0, len(resp.Properties.Template.Containers))
 	for _, c := range resp.Properties.Template.Containers {
-		cs = append(cs, m.Container{Name: c.Name, Image: c.Image, Command: c.Command, Args: c.Args})
+		// Convert env vars to map
+		envMap := make(map[string]string)
+		for _, env := range c.Env {
+			envMap[env.Name] = env.Value
+		}
+
+		// Extract probe types
+		var probes []string
+		for _, probe := range c.Probes {
+			probes = append(probes, probe.Type)
+		}
+
+		// Extract volume mounts
+		var volumeMounts []string
+		for _, vm := range c.VolumeMounts {
+			volumeMounts = append(volumeMounts, fmt.Sprintf("%s:%s", vm.VolumeName, vm.MountPath))
+		}
+
+		container := m.Container{
+			Name:         c.Name,
+			Image:        c.Image,
+			Command:      c.Command,
+			Args:         c.Args,
+			CPU:          c.Resources.CPU,
+			Memory:       c.Resources.Memory,
+			Env:          envMap,
+			Probes:       probes,
+			VolumeMounts: volumeMounts,
+		}
+		cs = append(cs, container)
 	}
 	return cs, nil
 }

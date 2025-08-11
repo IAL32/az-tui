@@ -21,20 +21,11 @@ func (m model) createSpinner() spinner.Model {
 
 // createAppsTable creates a table component for container apps
 func (m model) createAppsTable() table.Model {
-	// Initialize column widths with header lengths
+	// Calculate dynamic widths for Name and Resource Group columns based on content
 	nameWidth := len("Name")
 	rgWidth := len("Resource Group")
-	locationWidth := len("Location")
-	statusWidth := len("Status")
-	replicasWidth := len("Replicas")
-	resourcesWidth := len("Resources")
-	ingressWidth := len("Ingress")
-	identityWidth := len("Identity")
-	workloadWidth := len("Workload")
-	revisionWidth := len("Latest Revision")
-	fqdnWidth := len("FQDN")
 
-	// Find maximum width needed for each column based on actual data
+	// Find maximum width needed for Name and Resource Group columns
 	for _, app := range m.apps {
 		if len(app.Name) > nameWidth {
 			nameWidth = len(app.Name)
@@ -42,146 +33,30 @@ func (m model) createAppsTable() table.Model {
 		if len(app.ResourceGroup) > rgWidth {
 			rgWidth = len(app.ResourceGroup)
 		}
-		if len(app.Location) > locationWidth {
-			locationWidth = len(app.Location)
-		}
-		if len(app.LatestRevision) > revisionWidth {
-			revisionWidth = len(app.LatestRevision)
-		}
-
-		// Calculate formatted values and check their lengths
-		fqdn := app.IngressFQDN
-		if fqdn == "" {
-			fqdn = "-"
-		}
-		if len(fqdn) > fqdnWidth {
-			fqdnWidth = len(fqdn)
-		}
-
-		status := app.RunningStatus
-		if status == "" {
-			status = app.ProvisioningState
-		}
-		if status == "" {
-			status = "Unknown"
-		}
-		if len(status) > statusWidth {
-			statusWidth = len(status)
-		}
-
-		// Format replicas and check length
-		replicas := fmt.Sprintf("%d-%d", app.MinReplicas, app.MaxReplicas)
-		if app.MinReplicas == 0 && app.MaxReplicas == 0 {
-			replicas = "-"
-		}
-		if len(replicas) > replicasWidth {
-			replicasWidth = len(replicas)
-		}
-
-		// Format resources and check length
-		resources := fmt.Sprintf("%.2gC/%.1s", app.CPU, app.Memory)
-		if app.CPU == 0 {
-			resources = "-"
-		}
-		if len(resources) > resourcesWidth {
-			resourcesWidth = len(resources)
-		}
-
-		// Format ingress and check length
-		ingress := "None"
-		if app.IngressFQDN != "" {
-			if app.IngressExternal {
-				ingress = "External"
-			} else {
-				ingress = "Internal"
-			}
-			if app.TargetPort > 0 {
-				ingress += fmt.Sprintf(":%d", app.TargetPort)
-			}
-		}
-		if len(ingress) > ingressWidth {
-			ingressWidth = len(ingress)
-		}
-
-		// Format identity and check length
-		identity := app.IdentityType
-		if identity == "" {
-			identity = "None"
-		}
-		if len(identity) > identityWidth {
-			identityWidth = len(identity)
-		}
-
-		// Format workload profile and check length
-		workload := app.WorkloadProfile
-		if workload == "" {
-			workload = "Consumption"
-		}
-		if len(workload) > workloadWidth {
-			workloadWidth = len(workload)
-		}
 	}
 
-	// Add padding to each column for readability
+	// Add padding and set minimum widths
 	nameWidth += 2
 	rgWidth += 2
-	locationWidth += 2
-	statusWidth += 2
-	replicasWidth += 2
-	resourcesWidth += 2
-	ingressWidth += 2
-	identityWidth += 2
-	workloadWidth += 2
-	revisionWidth += 2
-	fqdnWidth += 2
-
-	// Set reasonable minimum widths to ensure readability
-	if nameWidth < 12 {
-		nameWidth = 12
+	if nameWidth < 15 {
+		nameWidth = 15
 	}
-	if rgWidth < 15 {
-		rgWidth = 15
-	}
-	if locationWidth < 12 {
-		locationWidth = 12
-	}
-	if statusWidth < 10 {
-		statusWidth = 10
-	}
-	if replicasWidth < 8 {
-		replicasWidth = 8
-	}
-	if resourcesWidth < 10 {
-		resourcesWidth = 10
-	}
-	if ingressWidth < 8 {
-		ingressWidth = 8
-	}
-	if identityWidth < 8 {
-		identityWidth = 8
-	}
-	if workloadWidth < 12 {
-		workloadWidth = 12
-	}
-	if revisionWidth < 16 {
-		revisionWidth = 16
-	}
-	if fqdnWidth < 20 {
-		fqdnWidth = 20
+	if rgWidth < 18 {
+		rgWidth = 18
 	}
 
 	columns := []table.Column{
-		table.NewColumn(columnKeyAppName, "Name", nameWidth),
-		table.NewColumn(columnKeyAppRG, "Resource Group", rgWidth),
-		table.NewColumn(columnKeyAppLocation, "Location", locationWidth),
-		table.NewColumn(columnKeyAppStatus, "Status", statusWidth),
-		table.NewColumn(columnKeyAppReplicas, "Replicas", replicasWidth),
-		table.NewColumn(columnKeyAppResources, "Resources", resourcesWidth),
-		table.NewColumn(columnKeyAppIngress, "Ingress", ingressWidth),
-		table.NewColumn(columnKeyAppIdentity, "Identity", identityWidth),
-		table.NewColumn(columnKeyAppWorkload, "Workload", workloadWidth),
-		table.NewColumn(columnKeyAppRevision, "Latest Revision", revisionWidth),
-		table.NewColumn(columnKeyAppFQDN, "FQDN", fqdnWidth),
+		table.NewColumn(columnKeyAppName, "Name", nameWidth),         // Dynamic width based on content
+		table.NewColumn(columnKeyAppRG, "Resource Group", rgWidth),   // Dynamic width based on content
+		table.NewColumn(columnKeyAppLocation, "Location", 15),        // Fixed width
+		table.NewColumn(columnKeyAppStatus, "Status", 12),            // Fixed width
+		table.NewColumn(columnKeyAppReplicas, "Replicas", 10),        // Fixed width
+		table.NewColumn(columnKeyAppResources, "Resources", 12),      // Fixed width
+		table.NewColumn(columnKeyAppIngress, "Ingress", 18),          // Fixed width
+		table.NewColumn(columnKeyAppIdentity, "Identity", 15),        // Fixed width
+		table.NewColumn(columnKeyAppWorkload, "Workload", 15),        // Fixed width
+		table.NewColumn(columnKeyAppRevision, "Latest Revision", 30), // Fixed width
+		table.NewColumn(columnKeyAppFQDN, "FQDN", 60),                // Fixed width (longest content)
 	}
 
 	var rows []table.Row
@@ -292,13 +167,18 @@ func (m model) createAppsTable() table.Model {
 
 // createRevisionsTable creates a table component for revisions
 func (m model) createRevisionsTable() table.Model {
-	// Use fixed column widths optimized for content, allowing horizontal scroll
 	columns := []table.Column{
-		table.NewColumn(columnKeyRevName, "Revision", 35),
-		table.NewColumn(columnKeyRevActive, "Active", 8),
-		table.NewColumn(columnKeyRevTraffic, "Traffic", 10),
-		table.NewColumn(columnKeyRevCreated, "Created", 20),
-		table.NewColumn(columnKeyRevStatus, "Status", 15),
+		table.NewColumn(columnKeyRevName, "Revision", 25),       // Fixed width for frozen column
+		table.NewColumn(columnKeyRevActive, "Active", 8),        // Fixed width
+		table.NewColumn(columnKeyRevTraffic, "Traffic", 10),     // Fixed width
+		table.NewColumn(columnKeyRevReplicas, "Replicas", 10),   // Fixed width
+		table.NewColumn(columnKeyRevScaling, "Scaling", 12),     // Fixed width
+		table.NewColumn(columnKeyRevResources, "Resources", 15), // Fixed width
+		table.NewColumn(columnKeyRevHealth, "Health", 12),       // Fixed width
+		table.NewColumn(columnKeyRevRunning, "Running", 15),     // Fixed width
+		table.NewColumn(columnKeyRevCreated, "Created", 20),     // Fixed width
+		table.NewColumn(columnKeyRevStatus, "Status", 15),       // Fixed width
+		table.NewColumn(columnKeyRevFQDN, "FQDN", 60),           // Fixed width (longest content)
 	}
 
 	var rows []table.Row
@@ -315,28 +195,80 @@ func (m model) createRevisionsTable() table.Model {
 				created = rev.CreatedAt.Format("2006-01-02 15:04")
 			}
 
-			status := rev.Status
+			// Status priority: HealthState > RunningState > ProvisioningState
+			status := rev.HealthState
+			if status == "" {
+				status = rev.RunningState
+			}
+			if status == "" {
+				status = rev.ProvisioningState
+			}
 			if status == "" {
 				status = "-"
 			}
 
+			// Current replicas
+			replicas := fmt.Sprintf("%d", rev.Replicas)
+
+			// Scaling range
+			scaling := fmt.Sprintf("%d-%d", rev.MinReplicas, rev.MaxReplicas)
+			if rev.MinReplicas == 0 && rev.MaxReplicas == 0 {
+				scaling = "-"
+			}
+
+			// Resources
+			resources := fmt.Sprintf("%.2gC/%.1s", rev.CPU, rev.Memory)
+			if rev.CPU == 0 {
+				resources = "-"
+			}
+
+			// Health state
+			health := rev.HealthState
+			if health == "" {
+				health = "-"
+			}
+
+			// Running state
+			running := rev.RunningState
+			if running == "" {
+				running = "-"
+			}
+
+			// FQDN
+			fqdn := rev.FQDN
+			if fqdn == "" {
+				fqdn = "-"
+			}
+
 			rows[i] = table.NewRow(table.RowData{
-				columnKeyRevName:    rev.Name,
-				columnKeyRevActive:  activeMark,
-				columnKeyRevTraffic: fmt.Sprintf("%d%%", rev.Traffic),
-				columnKeyRevCreated: created,
-				columnKeyRevStatus:  status,
+				columnKeyRevName:      rev.Name,
+				columnKeyRevActive:    activeMark,
+				columnKeyRevTraffic:   fmt.Sprintf("%d%%", rev.Traffic),
+				columnKeyRevReplicas:  replicas,
+				columnKeyRevScaling:   scaling,
+				columnKeyRevResources: resources,
+				columnKeyRevHealth:    health,
+				columnKeyRevRunning:   running,
+				columnKeyRevCreated:   created,
+				columnKeyRevStatus:    status,
+				columnKeyRevFQDN:      fqdn,
 			})
 		}
 	} else {
 		// Create empty table with placeholder
 		rows = []table.Row{
 			table.NewRow(table.RowData{
-				columnKeyRevName:    "No revisions",
-				columnKeyRevActive:  "",
-				columnKeyRevTraffic: "",
-				columnKeyRevCreated: "",
-				columnKeyRevStatus:  "",
+				columnKeyRevName:      "No revisions",
+				columnKeyRevActive:    "",
+				columnKeyRevTraffic:   "",
+				columnKeyRevReplicas:  "",
+				columnKeyRevScaling:   "",
+				columnKeyRevResources: "",
+				columnKeyRevHealth:    "",
+				columnKeyRevRunning:   "",
+				columnKeyRevCreated:   "",
+				columnKeyRevStatus:    "",
+				columnKeyRevFQDN:      "",
 			}),
 		}
 	}
@@ -367,13 +299,16 @@ func (m model) createRevisionsTable() table.Model {
 
 // createContainersTable creates a table component for containers
 func (m model) createContainersTable() table.Model {
-	// Use fixed column widths optimized for content, allowing horizontal scroll
 	columns := []table.Column{
-		table.NewColumn(columnKeyCtrName, "Container", 20),
-		table.NewColumn(columnKeyCtrImage, "Image", 50),
-		table.NewColumn(columnKeyCtrCommand, "Command", 30),
-		table.NewColumn(columnKeyCtrArgs, "Args", 30),
-		table.NewColumn(columnKeyCtrStatus, "Status", 12),
+		table.NewColumn(columnKeyCtrName, "Container", 18),      // Fixed width for frozen column
+		table.NewColumn(columnKeyCtrImage, "Image", 50),         // Fixed width (longest content)
+		table.NewColumn(columnKeyCtrCommand, "Command", 25),     // Fixed width
+		table.NewColumn(columnKeyCtrArgs, "Args", 25),           // Fixed width
+		table.NewColumn(columnKeyCtrResources, "Resources", 15), // Fixed width
+		table.NewColumn(columnKeyCtrEnvCount, "Env", 8),         // Fixed width
+		table.NewColumn(columnKeyCtrProbes, "Probes", 12),       // Fixed width
+		table.NewColumn(columnKeyCtrVolumes, "Volumes", 10),     // Fixed width
+		table.NewColumn(columnKeyCtrStatus, "Status", 10),       // Fixed width
 	}
 
 	var rows []table.Row
@@ -390,23 +325,55 @@ func (m model) createContainersTable() table.Model {
 				args = "-"
 			}
 
+			// Resources
+			resources := fmt.Sprintf("%.2gC/%.1s", ctr.CPU, ctr.Memory)
+			if ctr.CPU == 0 {
+				resources = "-"
+			}
+
+			// Environment variables count
+			envCount := fmt.Sprintf("%d", len(ctr.Env))
+			if len(ctr.Env) == 0 {
+				envCount = "-"
+			}
+
+			// Probes
+			probes := strings.Join(ctr.Probes, ",")
+			if probes == "" {
+				probes = "-"
+			}
+
+			// Volume mounts count
+			volumes := fmt.Sprintf("%d", len(ctr.VolumeMounts))
+			if len(ctr.VolumeMounts) == 0 {
+				volumes = "-"
+			}
+
 			rows[i] = table.NewRow(table.RowData{
-				columnKeyCtrName:    ctr.Name,
-				columnKeyCtrImage:   ctr.Image,
-				columnKeyCtrCommand: command,
-				columnKeyCtrArgs:    args,
-				columnKeyCtrStatus:  "Running", // Default status
+				columnKeyCtrName:      ctr.Name,
+				columnKeyCtrImage:     ctr.Image,
+				columnKeyCtrCommand:   command,
+				columnKeyCtrArgs:      args,
+				columnKeyCtrResources: resources,
+				columnKeyCtrEnvCount:  envCount,
+				columnKeyCtrProbes:    probes,
+				columnKeyCtrVolumes:   volumes,
+				columnKeyCtrStatus:    "Running", // Default status
 			})
 		}
 	} else {
 		// Create empty table with placeholder
 		rows = []table.Row{
 			table.NewRow(table.RowData{
-				columnKeyCtrName:    "No containers",
-				columnKeyCtrImage:   "",
-				columnKeyCtrCommand: "",
-				columnKeyCtrArgs:    "",
-				columnKeyCtrStatus:  "",
+				columnKeyCtrName:      "No containers",
+				columnKeyCtrImage:     "",
+				columnKeyCtrCommand:   "",
+				columnKeyCtrArgs:      "",
+				columnKeyCtrResources: "",
+				columnKeyCtrEnvCount:  "",
+				columnKeyCtrProbes:    "",
+				columnKeyCtrVolumes:   "",
+				columnKeyCtrStatus:    "",
 			}),
 		}
 	}

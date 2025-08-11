@@ -11,11 +11,17 @@ import (
 
 // Table column keys for Revisions mode
 const (
-	columnKeyRevName    = "name"
-	columnKeyRevActive  = "active"
-	columnKeyRevTraffic = "traffic"
-	columnKeyRevCreated = "created"
-	columnKeyRevStatus  = "status"
+	columnKeyRevName      = "name"
+	columnKeyRevActive    = "active"
+	columnKeyRevTraffic   = "traffic"
+	columnKeyRevCreated   = "created"
+	columnKeyRevStatus    = "status"
+	columnKeyRevReplicas  = "replicas"
+	columnKeyRevScaling   = "scaling"
+	columnKeyRevResources = "resources"
+	columnKeyRevHealth    = "health"
+	columnKeyRevRunning   = "running"
+	columnKeyRevFQDN      = "fqdn"
 )
 
 // Revision-related messages

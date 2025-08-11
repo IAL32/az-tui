@@ -10,11 +10,15 @@ import (
 
 // Table column keys for Containers mode
 const (
-	columnKeyCtrName    = "name"
-	columnKeyCtrImage   = "image"
-	columnKeyCtrCommand = "command"
-	columnKeyCtrArgs    = "args"
-	columnKeyCtrStatus  = "status"
+	columnKeyCtrName      = "name"
+	columnKeyCtrImage     = "image"
+	columnKeyCtrCommand   = "command"
+	columnKeyCtrArgs      = "args"
+	columnKeyCtrResources = "resources"
+	columnKeyCtrEnvCount  = "envcount"
+	columnKeyCtrProbes    = "probes"
+	columnKeyCtrVolumes   = "volumes"
+	columnKeyCtrStatus    = "status"
 )
 
 // Navigation functions

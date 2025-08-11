@@ -26,19 +26,39 @@ type ContainerApp struct {
 }
 
 type Revision struct {
-	Name      string    `json:"name"`
-	Active    bool      `json:"active"`
-	Traffic   int       `json:"traffic"`
-	CreatedAt time.Time `json:"createdAt"`
-	Status    string    `json:"status"`
+	Name              string    `json:"name"`
+	Active            bool      `json:"active"`
+	Traffic           int       `json:"traffic"`
+	CreatedAt         time.Time `json:"createdAt"`
+	Status            string    `json:"status"`
+	FQDN              string    `json:"fqdn"`
+	Replicas          int       `json:"replicas"`
+	HealthState       string    `json:"healthState"`
+	ProvisioningState string    `json:"provisioningState"`
+	RunningState      string    `json:"runningState"`
+	MinReplicas       int       `json:"minReplicas"`
+	MaxReplicas       int       `json:"maxReplicas"`
+	CPU               float64   `json:"cpu"`
+	Memory            string    `json:"memory"`
 }
 
 type Container struct {
-	Name    string
-	Image   string
-	Command []string
-	Args    []string
-	// add Ports, Env etc. as you like
+	Name         string            `json:"name"`
+	Image        string            `json:"image"`
+	Command      []string          `json:"command"`
+	Args         []string          `json:"args"`
+	CPU          float64           `json:"cpu"`
+	Memory       string            `json:"memory"`
+	Env          map[string]string `json:"env"`
+	Ports        []ContainerPort   `json:"ports"`
+	Probes       []string          `json:"probes"`
+	VolumeMounts []string          `json:"volumeMounts"`
+}
+
+type ContainerPort struct {
+	Name     string `json:"name"`
+	Port     int    `json:"port"`
+	Protocol string `json:"protocol"`
 }
 
 type RevItem struct{ Revision }
