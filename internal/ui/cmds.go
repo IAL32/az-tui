@@ -22,15 +22,6 @@ func LoadAppsCmd(rg string) tea.Cmd {
 	}
 }
 
-func LoadDetailsCmd(a m.ContainerApp) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		js, err := azure.GetAppDetails(ctx, a.Name, a.ResourceGroup)
-		return loadedDetailsMsg{js, err}
-	}
-}
-
 func LoadRevsCmd(a m.ContainerApp) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

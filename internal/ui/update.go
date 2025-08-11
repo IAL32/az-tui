@@ -41,6 +41,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Handle table navigation for unhandled keys
+		var cmd tea.Cmd
+		switch m.mode {
+		case modeApps:
+			m.appsTable, cmd = m.appsTable.Update(msg)
+		case modeRevs:
+			m.revisionsTable, cmd = m.revisionsTable.Update(msg)
+		case modeContainers:
+			m.containersTable, cmd = m.containersTable.Update(msg)
+		}
+
+		if cmd != nil {
+			return m, cmd
+		}
+
 	case tea.WindowSizeMsg:
 		w, h := msg.Width, msg.Height
 		m.termW, m.termH = w, h
@@ -48,9 +63,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case loadedAppsMsg:
 		return m.handleLoadedAppsMsg(msg)
-
-	case loadedDetailsMsg:
-		return m.handleLoadedDetailsMsg(msg)
 
 	case loadedRevsMsg:
 		return m.handleLoadedRevsMsg(msg)

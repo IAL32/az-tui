@@ -7,16 +7,10 @@ import (
 	models "az-tui/internal/models"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/evertras/bubble-table/table"
 )
 
-// ------------------------------ UI ------------------------------
-
-type item models.ContainerApp
-
-func (i item) Title() string       { return i.Name }
-func (i item) Description() string { return i.ResourceGroup }
-func (i item) FilterValue() string { return i.Name + " " + i.ResourceGroup }
-
+// Constants
 type mode int
 
 const (
@@ -25,7 +19,7 @@ const (
 	modeContainers
 )
 
-// ConfirmDialog holds state for a generic yes/no modal.
+// Types
 type ConfirmDialog struct {
 	Visible bool
 	Text    string
@@ -38,12 +32,11 @@ type model struct {
 	apps []models.ContainerApp
 	revs []models.Revision
 	ctrs []models.Container
-	json string
 
-	// Simple selection state (just indices)
-	selectedApp       int
-	selectedRevision  int
-	selectedContainer int
+	// Table components for each mode
+	appsTable       table.Model
+	revisionsTable  table.Model
+	containersTable table.Model
 
 	// Context for navigation
 	currentAppID   string // When viewing revisions
@@ -71,22 +64,16 @@ type model struct {
 	azureCommands *AzureCommands
 }
 
-// messages for async commands
-
+// Messages
 type noop struct{}
 
+// Initialization
 func InitialModel() model {
-	return model{
+	m := model{
 		// Pure data
 		apps: nil,
 		revs: nil,
 		ctrs: nil,
-		json: "",
-
-		// Simple selection state
-		selectedApp:       0,
-		selectedRevision:  0,
-		selectedContainer: 0,
 
 		// Context for navigation
 		currentAppID:   "",
@@ -114,33 +101,52 @@ func InitialModel() model {
 		// Command execution
 		azureCommands: NewAzureCommands(),
 	}
+
+	// Initialize empty tables
+	m.appsTable = m.createAppsTable()
+	m.revisionsTable = m.createRevisionsTable()
+	m.containersTable = m.createContainersTable()
+
+	return m
 }
 
-func appID(a models.ContainerApp) string { return fmt.Sprintf("%s/%s", a.ResourceGroup, a.Name) }
+func (m model) Init() tea.Cmd {
+	return LoadAppsCmd(m.rg)
+}
 
-func revKey(appID, rev string) string { return appID + "@" + rev }
+// Helper functions
+func appID(a models.ContainerApp) string {
+	return fmt.Sprintf("%s/%s", a.ResourceGroup, a.Name)
+}
+
+func revKey(appID, rev string) string {
+	return appID + "@" + rev
+}
 
 func (m model) currentApp() (models.ContainerApp, bool) {
-	if m.selectedApp >= 0 && m.selectedApp < len(m.apps) {
-		return m.apps[m.selectedApp], true
+	if len(m.apps) == 0 {
+		return models.ContainerApp{}, false
 	}
+
+	// Get selected app from table
+	selectedRow := m.appsTable.HighlightedRow()
+	if selectedRow.Data == nil {
+		return models.ContainerApp{}, false
+	}
+
+	appName, ok := selectedRow.Data[columnKeyAppName].(string)
+	if !ok {
+		return models.ContainerApp{}, false
+	}
+
+	// Find the app by name
+	for _, app := range m.apps {
+		if app.Name == appName {
+			return app, true
+		}
+	}
+
 	return models.ContainerApp{}, false
-}
-
-func (m *model) enterRevsFor(a models.ContainerApp) tea.Cmd {
-	m.mode = modeRevs
-	m.currentAppID = appID(a)
-
-	// Reset revision selection
-	m.selectedRevision = 0
-
-	return LoadRevsCmd(a)
-}
-
-// Call when leaving revisions mode.
-func (m *model) leaveRevs() {
-	m.mode = modeApps
-	m.currentAppID = ""
 }
 
 func (m model) withConfirm(text string, onYes func(model) (model, tea.Cmd), onNo func(model) (model, tea.Cmd)) model {
@@ -149,8 +155,4 @@ func (m model) withConfirm(text string, onYes func(model) (model, tea.Cmd), onNo
 	m.confirm.OnYes = onYes
 	m.confirm.OnNo = onNo
 	return m
-}
-
-func (m model) Init() tea.Cmd {
-	return LoadAppsCmd(m.rg)
 }

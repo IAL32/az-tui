@@ -2,14 +2,20 @@ package ui
 
 import (
 	"fmt"
-	"sort"
 
 	models "az-tui/internal/models"
 
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+)
+
+// Table column keys for Revisions mode
+const (
+	columnKeyRevName    = "name"
+	columnKeyRevActive  = "active"
+	columnKeyRevTraffic = "traffic"
+	columnKeyRevCreated = "created"
+	columnKeyRevStatus  = "status"
 )
 
 // Revision-related messages
@@ -25,7 +31,24 @@ type revisionRestartedMsg struct {
 	out     string
 }
 
-// Handle loadedRevsMsg
+// Navigation functions
+func (m *model) enterRevsFor(a models.ContainerApp) tea.Cmd {
+	m.mode = modeRevs
+	m.currentAppID = appID(a)
+
+	return LoadRevsCmd(a)
+}
+
+func (m *model) leaveRevs() {
+	m.mode = modeApps
+	m.currentAppID = ""
+
+	// Clear revisions state
+	m.revs = nil
+	m.revisionsTable = m.createRevisionsTable()
+}
+
+// Message handlers
 func (m model) handleLoadedRevsMsg(msg loadedRevsMsg) (model, tea.Cmd) {
 	m.err = msg.err
 
@@ -35,14 +58,14 @@ func (m model) handleLoadedRevsMsg(msg loadedRevsMsg) (model, tea.Cmd) {
 	}
 
 	m.revs = msg.revs
+	// Update the revisions table with new data
 	if len(m.revs) > 0 {
-		m.selectedRevision = 0
+		m.revisionsTable = m.createRevisionsTable()
 	}
 
 	return m, nil
 }
 
-// Handle revisionRestartedMsg
 func (m model) handleRevisionRestartedMsg(msg revisionRestartedMsg) (model, tea.Cmd) {
 	if msg.err != nil {
 		m.statusLine = fmt.Sprintf("Restart failed: %v", msg.err)
@@ -57,41 +80,85 @@ func (m model) handleRevisionRestartedMsg(msg revisionRestartedMsg) (model, tea.
 	return m, nil
 }
 
-// Handle key events when in Revisions mode.
+// Key handlers
 func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	switch msg.String() {
-	case "j", "down":
-		if m.selectedRevision < len(m.revs)-1 {
-			m.selectedRevision++
-		}
-		return m, nil, true
-	case "k", "up":
-		if m.selectedRevision > 0 {
-			m.selectedRevision--
-		}
-		return m, nil, true
+	case "ctrl+c", "q":
+		return m, tea.Quit, true
 	case "enter":
-		if len(m.revs) == 0 || m.selectedRevision >= len(m.revs) {
+		if len(m.revs) == 0 {
 			return m, nil, true
 		}
-		rev := m.revs[m.selectedRevision]
+
+		// Get selected revision from table
+		selectedRow := m.revisionsTable.HighlightedRow()
+		if selectedRow.Data == nil {
+			return m, nil, true
+		}
+
+		revName, ok := selectedRow.Data[columnKeyRevName].(string)
+		if !ok {
+			return m, nil, true
+		}
+
+		// Find the revision by name
+		var selectedRev models.Revision
+		found := false
+		for _, rev := range m.revs {
+			if rev.Name == revName {
+				selectedRev = rev
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return m, nil, true
+		}
+
 		a := m.getCurrentApp()
 		if a.Name == "" {
 			return m, nil, true
 		}
 
 		m.mode = modeContainers
-		m.currentRevName = rev.Name
+		m.currentRevName = selectedRev.Name
 
 		// Clear containers and load new ones
 		m.ctrs = nil
-		m.selectedContainer = 0
-		return m, LoadContainersCmd(a, rev.Name), true
+		return m, LoadContainersCmd(a, selectedRev.Name), true
+
 	case "r":
-		if len(m.revs) == 0 || m.selectedRevision >= len(m.revs) {
+		if len(m.revs) == 0 {
 			return m, nil, true
 		}
-		rev := m.revs[m.selectedRevision]
+
+		// Get selected revision from table
+		selectedRow := m.revisionsTable.HighlightedRow()
+		if selectedRow.Data == nil {
+			return m, nil, true
+		}
+
+		revName, ok := selectedRow.Data[columnKeyRevName].(string)
+		if !ok {
+			return m, nil, true
+		}
+
+		// Find the revision by name
+		var selectedRev models.Revision
+		found := false
+		for _, rev := range m.revs {
+			if rev.Name == revName {
+				selectedRev = rev
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return m, nil, true
+		}
+
 		a := m.getCurrentApp()
 		if a.Name == "" {
 			return m, nil, true
@@ -103,162 +170,122 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		}
 
 		txt := fmt.Sprintf("Restart revision?\n\nApp: %s\nRevision: %s\n(affects all containers incl. %q)",
-			a.Name, rev.Name, containerNames)
+			a.Name, selectedRev.Name, containerNames)
 
 		m = m.withConfirm(
 			txt,
 			func(mm model) (model, tea.Cmd) {
 				mm.statusLine = "Restarting revision..."
-				return mm, RestartRevisionCmd(a, rev.Name)
+				return mm, RestartRevisionCmd(a, selectedRev.Name)
 			},
 			nil, // no action on cancel
 		)
 		return m, nil, true
+
 	case "s":
-		if len(m.revs) == 0 || m.selectedRevision >= len(m.revs) {
+		if len(m.revs) == 0 {
 			return m, nil, true
 		}
-		rev := m.revs[m.selectedRevision]
+
+		// Get selected revision from table
+		selectedRow := m.revisionsTable.HighlightedRow()
+		if selectedRow.Data == nil {
+			return m, nil, true
+		}
+
+		revName, ok := selectedRow.Data[columnKeyRevName].(string)
+		if !ok {
+			return m, nil, true
+		}
+
+		// Find the revision by name
+		var selectedRev models.Revision
+		found := false
+		for _, rev := range m.revs {
+			if rev.Name == revName {
+				selectedRev = rev
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return m, nil, true
+		}
+
 		a := m.getCurrentApp()
 		if a.Name == "" {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ExecIntoRevision(a, rev.Name), true
+		return m, m.azureCommands.ExecIntoRevision(a, selectedRev.Name), true
 
 	case "l":
-		if len(m.revs) == 0 || m.selectedRevision >= len(m.revs) {
+		if len(m.revs) == 0 {
 			return m, nil, true
 		}
-		rev := m.revs[m.selectedRevision]
+
+		// Get selected revision from table
+		selectedRow := m.revisionsTable.HighlightedRow()
+		if selectedRow.Data == nil {
+			return m, nil, true
+		}
+
+		revName, ok := selectedRow.Data[columnKeyRevName].(string)
+		if !ok {
+			return m, nil, true
+		}
+
+		// Find the revision by name
+		var selectedRev models.Revision
+		found := false
+		for _, rev := range m.revs {
+			if rev.Name == revName {
+				selectedRev = rev
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return m, nil, true
+		}
+
 		a := m.getCurrentApp()
 		if a.Name == "" {
 			return m, nil, true
 		}
-		return m, m.azureCommands.ShowRevisionLogs(a, rev.Name), true
+
+		return m, m.azureCommands.ShowRevisionLogs(a, selectedRev.Name), true
 
 	case "esc":
 		m.leaveRevs()
 		return m, nil, true
 	}
+
 	return m, nil, false
 }
 
+// View functions
 func (m model) viewRevs() string {
 	if m.err != nil && !m.loading {
 		return StyleError.Render("Error: ") + m.err.Error() + "  [b/esc] back"
 	}
 
-	// Create components from current data
-	revsList := m.createRevisionsList()
-	detailsView := m.createDetailsView()
+	// Show table view
+	tableView := m.revisionsTable.View()
+	help := styleAccent.Render("[enter] containers  [s] exec  [l] logs  [r] restart revision  [shift+←/→] scroll  [b/esc] back  [q] quit")
 
-	left := revsList.View()
-	right := styleTitle.Render("Details") + "\n" + detailsView.View()
-	help := styleAccent.Render("[enter] containers  [s] exec  [l] logs  [r] restart revision  [b/esc] back  [q] quit  (j/k navigate)")
-
-	body := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		lipgloss.NewStyle().Width(34).Render(left),
-		lipgloss.NewStyle().Padding(0, 1).Render(right),
-	) + "\n" + help + "\n" + m.statusLine
+	body := lipgloss.JoinVertical(
+		lipgloss.Left,
+		styleTitle.Render(fmt.Sprintf("Revisions — %s", m.getCurrentAppName())),
+		tableView,
+		help,
+		m.statusLine,
+	)
 
 	if m.confirm.Visible {
 		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
 	}
 	return body
-}
-
-// Component factory methods for revisions mode
-
-// createRevisionsList creates a list component for revisions
-func (m model) createRevisionsList() list.Model {
-	items := make([]list.Item, len(m.revs))
-	for i, rev := range m.revs {
-		items[i] = models.RevItem{Revision: rev}
-	}
-
-	l := list.New(items, list.NewDefaultDelegate(), 32, m.termH-2)
-	l.Title = fmt.Sprintf("Revisions — %s", m.getCurrentAppName())
-	l.SetShowTitle(true)
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(true)
-
-	if m.selectedRevision >= 0 && m.selectedRevision < len(items) {
-		l.Select(m.selectedRevision)
-	}
-
-	return l
-}
-
-// createRevisionsTable creates a table component for revisions
-func (m model) createRevisionsTable() table.Model {
-	columns := []table.Column{
-		{Title: "Revision", Width: 28},
-		{Title: "Active", Width: 6},
-		{Title: "Traffic", Width: 8},
-		{Title: "Created", Width: 18},
-		{Title: "Status", Width: 12},
-	}
-
-	t := table.New(table.WithColumns(columns))
-
-	if len(m.revs) == 0 {
-		t.SetRows([]table.Row{{"No revisions found", "", "", "", ""}})
-		return t
-	}
-
-	// Sort by traffic desc (same as original logic)
-	sortedRevs := make([]models.Revision, len(m.revs))
-	copy(sortedRevs, m.revs)
-	sort.Slice(sortedRevs, func(i, j int) bool { return sortedRevs[i].Traffic > sortedRevs[j].Traffic })
-
-	rows := make([]table.Row, len(sortedRevs))
-	for i, r := range sortedRevs {
-		activeMark := "·"
-		if r.Active {
-			activeMark = "✓"
-		}
-
-		created := "-"
-		if !r.CreatedAt.IsZero() {
-			created = r.CreatedAt.Format("2006-01-02 15:04")
-		}
-
-		status := r.Status
-		if status == "" {
-			status = "-"
-		}
-
-		rows[i] = table.Row{
-			r.Name,
-			activeMark,
-			fmt.Sprintf("%3d%%", r.Traffic),
-			created,
-			status,
-		}
-	}
-
-	t.SetRows(rows)
-
-	// Size the table appropriately
-	rightW := max(20, m.termW-34-2)
-	t.SetWidth(rightW)
-	if m.mode == modeApps {
-		t.SetHeight(m.termH - 4 - (m.termH-4)/2) // Bottom half of right pane
-	} else {
-		t.SetHeight(0) // Hidden in other modes
-	}
-
-	return t
-}
-
-// getRevisionContext returns context information for revisions mode
-func (m model) getRevisionContext() string {
-	app := m.getCurrentApp()
-	if app.Name == "" {
-		return "No app context"
-	}
-	return fmt.Sprintf("App: %s\nResource Group: %s\nRevisions: %d",
-		app.Name, app.ResourceGroup, len(m.revs))
 }

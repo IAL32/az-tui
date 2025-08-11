@@ -5,12 +5,24 @@ import "time"
 // ----------------------------- Data -----------------------------
 
 type ContainerApp struct {
-	Name           string `json:"name"`
-	ResourceGroup  string `json:"resourceGroup"`
-	Location       string `json:"location"`
-	EnvironmentID  string `json:"environmentId"`
-	LatestRevision string `json:"latestRevisionName"`
-	IngressFQDN    string `json:"ingressFqdn"`
+	Name              string  `json:"name"`
+	ResourceGroup     string  `json:"resourceGroup"`
+	Location          string  `json:"location"`
+	EnvironmentID     string  `json:"environmentId"`
+	LatestRevision    string  `json:"latestRevisionName"`
+	IngressFQDN       string  `json:"ingressFqdn"`
+	ProvisioningState string  `json:"provisioningState"`
+	RunningStatus     string  `json:"runningStatus"`
+	MinReplicas       int     `json:"minReplicas"`
+	MaxReplicas       int     `json:"maxReplicas"`
+	CPU               float64 `json:"cpu"`
+	Memory            string  `json:"memory"`
+	IngressExternal   bool    `json:"ingressExternal"`
+	TargetPort        int     `json:"targetPort"`
+	IdentityType      string  `json:"identityType"`
+	WorkloadProfile   string  `json:"workloadProfile"`
+	CreatedAt         string  `json:"createdAt"`
+	LastModifiedAt    string  `json:"lastModifiedAt"`
 }
 
 type Revision struct {

@@ -2,13 +2,30 @@ package ui
 
 import (
 	models "az-tui/internal/models"
-	"encoding/json"
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// Table column keys for Containers mode
+const (
+	columnKeyCtrName    = "name"
+	columnKeyCtrImage   = "image"
+	columnKeyCtrCommand = "command"
+	columnKeyCtrArgs    = "args"
+	columnKeyCtrStatus  = "status"
+)
+
+// Navigation functions
+func (m *model) leaveContainers() {
+	m.mode = modeRevs
+	m.currentRevName = ""
+
+	// Clear containers state
+	m.ctrs = nil
+	m.containersTable = m.createContainersTable()
+}
 
 // Container-related messages
 type loadedContainersMsg struct {
@@ -18,7 +35,7 @@ type loadedContainersMsg struct {
 	err     error
 }
 
-// Handle loadedContainersMsg
+// Message handlers
 func (m model) handleLoadedContainersMsg(msg loadedContainersMsg) (model, tea.Cmd) {
 	if msg.err != nil {
 		m.ctrs = nil
@@ -29,116 +46,123 @@ func (m model) handleLoadedContainersMsg(msg loadedContainersMsg) (model, tea.Cm
 	m.containersByRev[revKey(msg.appID, msg.revName)] = msg.ctrs
 	m.ctrs = msg.ctrs
 
-	// Set initial selection
+	// Create the containers table with the loaded data
 	if len(m.ctrs) > 0 {
-		m.selectedContainer = 0
+		m.containersTable = m.createContainersTable()
 	}
 
 	return m, nil
 }
 
-type ctrItem struct{ Container models.Container }
-
-func (ci ctrItem) Title() string       { return ci.Container.Name }
-func (ci ctrItem) Description() string { return ci.Container.Image }
-func (ci ctrItem) FilterValue() string { return ci.Container.Name + " " + ci.Container.Image }
-
+// Key handlers
 func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	switch msg.String() {
-	case "j", "down":
-		if m.selectedContainer < len(m.ctrs)-1 {
-			m.selectedContainer++
-		}
-		return m, nil, true
-	case "k", "up":
-		if m.selectedContainer > 0 {
-			m.selectedContainer--
-		}
-		return m, nil, true
+	case "ctrl+c", "q":
+		return m, tea.Quit, true
 	case "s":
-		if len(m.ctrs) == 0 || m.selectedContainer >= len(m.ctrs) {
+		if len(m.ctrs) == 0 {
 			return m, nil, true
 		}
-		container := m.ctrs[m.selectedContainer]
+
+		// Get selected container from table
+		selectedRow := m.containersTable.HighlightedRow()
+		if selectedRow.Data == nil {
+			return m, nil, true
+		}
+
+		containerName, ok := selectedRow.Data[columnKeyCtrName].(string)
+		if !ok {
+			return m, nil, true
+		}
+
+		// Find the container by name
+		var selectedContainer models.Container
+		found := false
+		for _, ctr := range m.ctrs {
+			if ctr.Name == containerName {
+				selectedContainer = ctr
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return m, nil, true
+		}
+
 		a := m.getCurrentApp()
 		if a.Name == "" || m.currentRevName == "" {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ExecIntoContainer(a, m.currentRevName, container.Name), true
+		return m, m.azureCommands.ExecIntoContainer(a, m.currentRevName, selectedContainer.Name), true
 
 	case "l":
-		if len(m.ctrs) == 0 || m.selectedContainer >= len(m.ctrs) {
+		if len(m.ctrs) == 0 {
 			return m, nil, true
 		}
-		container := m.ctrs[m.selectedContainer]
+
+		// Get selected container from table
+		selectedRow := m.containersTable.HighlightedRow()
+		if selectedRow.Data == nil {
+			return m, nil, true
+		}
+
+		containerName, ok := selectedRow.Data[columnKeyCtrName].(string)
+		if !ok {
+			return m, nil, true
+		}
+
+		// Find the container by name
+		var selectedContainer models.Container
+		found := false
+		for _, ctr := range m.ctrs {
+			if ctr.Name == containerName {
+				selectedContainer = ctr
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return m, nil, true
+		}
+
 		a := m.getCurrentApp()
 		if a.Name == "" || m.currentRevName == "" {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ShowContainerLogs(a, m.currentRevName, container.Name), true
+		return m, m.azureCommands.ShowContainerLogs(a, m.currentRevName, selectedContainer.Name), true
 
 	case "esc":
-		m.mode = modeRevs
+		m.leaveContainers()
 		return m, nil, true
 	}
+
 	return m, nil, false
 }
 
+// View functions
 func (m model) viewContainers() string {
 	if m.err != nil && !m.loading {
 		return StyleError.Render("Error: ") + m.err.Error() + "  [b/esc] back"
 	}
 
-	// Create components from current data
-	containersList := m.createContainersList()
-	detailsView := m.createDetailsView()
+	// Show table view
+	tableView := m.containersTable.View()
+	help := styleAccent.Render("[s] exec  [l] logs  [shift+←/→] scroll  [b/esc] back  [q] quit")
 
-	left := containersList.View()
-	right := styleTitle.Render("Details") + "\n" + detailsView.View()
-	help := styleAccent.Render("[s] exec  [l] logs  [r] restart  [b/esc] back  [q] quit  (j/k navigate)")
-
-	body := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		lipgloss.NewStyle().Width(34).Render(left),
-		lipgloss.NewStyle().Padding(0, 1).Render(right),
-	) + "\n" + help + "\n" + m.statusLine
+	body := lipgloss.JoinVertical(
+		lipgloss.Left,
+		styleTitle.Render(fmt.Sprintf("Containers — %s@%s", m.getCurrentAppName(), m.currentRevName)),
+		tableView,
+		help,
+		m.statusLine,
+	)
 
 	if m.confirm.Visible {
 		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
 	}
 	return body
-}
-
-// Component factory methods for containers mode
-
-// createContainersList creates a list component for containers
-func (m model) createContainersList() list.Model {
-	items := make([]list.Item, len(m.ctrs))
-	for i, ctr := range m.ctrs {
-		items[i] = ctrItem{Container: ctr}
-	}
-
-	l := list.New(items, list.NewDefaultDelegate(), 32, m.termH-2)
-	l.Title = fmt.Sprintf("Containers — %s@%s", m.getCurrentAppName(), m.currentRevName)
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(true)
-
-	if m.selectedContainer >= 0 && m.selectedContainer < len(items) {
-		l.Select(m.selectedContainer)
-	}
-
-	return l
-}
-
-// containerHeader returns header information for containers mode
-func (m model) containerHeader(a models.ContainerApp, rev string) string {
-	return fmt.Sprintf("App: %s  |  RG: %s  |  Rev: %s", a.Name, a.ResourceGroup, rev)
-}
-
-// prettyContainerJSON returns formatted JSON for a container
-func (m model) prettyContainerJSON(c models.Container) string {
-	b, _ := json.MarshalIndent(c, "", "  ")
-	return string(b)
 }

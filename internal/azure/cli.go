@@ -23,7 +23,26 @@ func RunAz(ctx context.Context, args ...string) (string, error) {
 }
 
 func ListContainerApps(ctx context.Context, rg string) ([]m.ContainerApp, error) {
-	q := "[].{name:name, resourceGroup:resourceGroup, environmentId:managedEnvironmentId, location:location, latestRevisionName:latestRevisionName, ingressFqdn:properties.configuration.ingress.fqdn}"
+	q := `[].{
+		name:name,
+		resourceGroup:resourceGroup,
+		environmentId:managedEnvironmentId,
+		location:location,
+		latestRevisionName:latestRevisionName,
+		ingressFqdn:properties.configuration.ingress.fqdn,
+		provisioningState:properties.provisioningState,
+		runningStatus:properties.runningStatus,
+		minReplicas:properties.template.scale.minReplicas,
+		maxReplicas:properties.template.scale.maxReplicas,
+		cpu:properties.template.containers[0].resources.cpu,
+		memory:properties.template.containers[0].resources.memory,
+		ingressExternal:properties.configuration.ingress.external,
+		targetPort:properties.configuration.ingress.targetPort,
+		identityType:identity.type,
+		workloadProfile:properties.workloadProfileName,
+		createdAt:systemData.createdAt,
+		lastModifiedAt:systemData.lastModifiedAt
+	}`
 	args := []string{"containerapp", "list", "-o", "json", "--query", q}
 	if rg != "" {
 		args = append(args, "-g", rg)
