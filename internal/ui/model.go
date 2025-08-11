@@ -46,6 +46,7 @@ type keyMap struct {
 	Filter     key.Binding
 	Logs       key.Binding
 	Exec       key.Binding
+	EnvVars    key.Binding
 
 	// Table navigation
 	ScrollLeft  key.Binding
@@ -63,7 +64,8 @@ func (k keyMap) ShortHelp() []key.Binding {
 // FullHelp returns keybindings for the expanded help view
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Enter, k.Refresh, k.Filter, k.Logs, k.Exec},
+		{k.Enter, k.Refresh, k.Filter, k.Logs},
+		{k.Exec, k.EnvVars, k.RestartRev, k.Back},
 		{k.ScrollLeft, k.ScrollRight, k.Help, k.Quit},
 	}
 }
@@ -214,6 +216,10 @@ func InitialModel() model {
 		Exec: key.NewBinding(
 			key.WithKeys("s"),
 			key.WithHelp("s", "exec"),
+		),
+		EnvVars: key.NewBinding(
+			key.WithKeys("v"),
+			key.WithHelp("v", "env vars"),
 		),
 		ScrollLeft: key.NewBinding(
 			key.WithKeys("shift+left"),

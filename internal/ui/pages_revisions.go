@@ -6,7 +6,172 @@ import (
 	models "az-tui/internal/models"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/evertras/bubble-table/table"
 )
+
+// createRevisionsTable creates a table component for revisions
+func (m model) createRevisionsTable() table.Model {
+	// Create dynamic column builder
+	builder := NewDynamicColumnBuilder().
+		AddColumn(columnKeyRevName, "Revision", 15, true).        // Dynamic width, min 15
+		AddColumn(columnKeyRevActive, "Active", 8, false).        // Fixed width
+		AddColumn(columnKeyRevTraffic, "Traffic", 10, false).     // Fixed width
+		AddColumn(columnKeyRevReplicas, "Replicas", 10, false).   // Fixed width
+		AddColumn(columnKeyRevScaling, "Scaling", 12, false).     // Fixed width
+		AddColumn(columnKeyRevResources, "Resources", 15, false). // Fixed width
+		AddColumn(columnKeyRevHealth, "Health", 12, true).        // Fixed width
+		AddColumn(columnKeyRevRunning, "Running", 15, true).      // Fixed width
+		AddColumn(columnKeyRevCreated, "Created", 20, false).     // Fixed width
+		AddColumn(columnKeyRevStatus, "Status", 15, true).        // Fixed width
+		AddColumn(columnKeyRevFQDN, "FQDN", 60, false)            // Fixed width (longest content)
+
+	// Update dynamic column widths based on actual content
+	for _, rev := range m.revs {
+		builder.UpdateWidthFromString(columnKeyRevName, rev.Name)
+	}
+
+	// Build columns with calculated widths
+	columns := builder.Build()
+
+	var rows []table.Row
+	if len(m.revs) > 0 {
+		rows = make([]table.Row, len(m.revs))
+		for i, rev := range m.revs {
+			activeMark := "·"
+			if rev.Active {
+				activeMark = "✓"
+			}
+
+			created := "-"
+			if !rev.CreatedAt.IsZero() {
+				created = rev.CreatedAt.Format("2006-01-02 15:04")
+			}
+
+			// Status priority: HealthState > RunningState > ProvisioningState
+			status := rev.HealthState
+			if status == "" {
+				status = rev.RunningState
+			}
+			if status == "" {
+				status = rev.ProvisioningState
+			}
+			if status == "" {
+				status = "-"
+			}
+
+			// Current replicas
+			replicas := fmt.Sprintf("%d", rev.Replicas)
+
+			// Scaling range
+			scaling := fmt.Sprintf("%d-%d", rev.MinReplicas, rev.MaxReplicas)
+			if rev.MinReplicas == 0 && rev.MaxReplicas == 0 {
+				scaling = "-"
+			}
+
+			// Resources
+			resources := fmt.Sprintf("%.2gC/%.1s", rev.CPU, rev.Memory)
+			if rev.CPU == 0 {
+				resources = "-"
+			}
+
+			// Health state
+			health := rev.HealthState
+			if health == "" {
+				health = "-"
+			}
+
+			// Running state
+			running := rev.RunningState
+			if running == "" {
+				running = "-"
+			}
+
+			// FQDN
+			fqdn := rev.FQDN
+			if fqdn == "" {
+				fqdn = "-"
+			}
+
+			rows[i] = table.NewRow(table.RowData{
+				columnKeyRevName:      rev.Name,
+				columnKeyRevActive:    activeMark,
+				columnKeyRevTraffic:   fmt.Sprintf("%d%%", rev.Traffic),
+				columnKeyRevReplicas:  replicas,
+				columnKeyRevScaling:   scaling,
+				columnKeyRevResources: resources,
+				columnKeyRevHealth:    health,
+				columnKeyRevRunning:   running,
+				columnKeyRevCreated:   created,
+				columnKeyRevStatus:    status,
+				columnKeyRevFQDN:      fqdn,
+			})
+		}
+	} else {
+		// Create empty table with placeholder
+		rows = []table.Row{
+			table.NewRow(table.RowData{
+				columnKeyRevName:      "No revisions",
+				columnKeyRevActive:    "",
+				columnKeyRevTraffic:   "",
+				columnKeyRevReplicas:  "",
+				columnKeyRevScaling:   "",
+				columnKeyRevResources: "",
+				columnKeyRevHealth:    "",
+				columnKeyRevRunning:   "",
+				columnKeyRevCreated:   "",
+				columnKeyRevStatus:    "",
+				columnKeyRevFQDN:      "",
+			}),
+		}
+	}
+
+	t := table.New(columns).
+		WithRows(rows).
+		BorderRounded().
+		WithBaseStyle(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#a7a")).
+			BorderForeground(lipgloss.Color("#a38"))).
+		WithMaxTotalWidth(m.termW).
+		WithHorizontalFreezeColumnCount(1).
+		Filtered(true).
+		WithFilterInput(m.revisionsFilterInput).
+		Focused(true)
+
+	// Only sort if we have actual data
+	if len(m.revs) > 0 {
+		t = t.SortByDesc(columnKeyRevTraffic)
+	}
+
+	// Calculate height dynamically based on actual help and status bar heights
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+
+	// Available height = total height - help bar - status bar
+	availableHeight := m.termH - helpBarHeight - statusBarHeight
+	if availableHeight > 0 {
+		t = t.WithPageSize(availableHeight)
+	}
+
+	return t
+}
+
+// getRevisionsHelpKeys returns the key bindings for revisions mode
+func (m model) getRevisionsHelpKeys() keyMap {
+	return keyMap{
+		Enter:       m.keys.Enter,
+		Refresh:     m.keys.Refresh,
+		RestartRev:  m.keys.RestartRev,
+		Filter:      m.keys.Filter,
+		ScrollLeft:  m.keys.ScrollLeft,
+		ScrollRight: m.keys.ScrollRight,
+		Help:        m.keys.Help,
+		Back:        m.keys.Back,
+		Quit:        m.keys.Quit,
+	}
+}
 
 // Navigation functions
 func (m *model) enterRevsFor(a models.ContainerApp) tea.Cmd {

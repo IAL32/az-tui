@@ -3,8 +3,145 @@ package ui
 import (
 	models "az-tui/internal/models"
 
+	"fmt"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/evertras/bubble-table/table"
 )
+
+// createContainersTable creates a table component for containers
+func (m model) createContainersTable() table.Model {
+	// Create dynamic column builder
+	builder := NewDynamicColumnBuilder().
+		AddColumn(columnKeyCtrName, "Container", 12, true).       // Dynamic width, min 12
+		AddColumn(columnKeyCtrStatus, "Status", 10, true).        // Fixed width - moved to second position
+		AddColumn(columnKeyCtrImage, "Image", 50, true).          // Fixed width (longest content)
+		AddColumn(columnKeyCtrCommand, "Command", 25, false).     // Fixed width
+		AddColumn(columnKeyCtrArgs, "Args", 25, false).           // Fixed width
+		AddColumn(columnKeyCtrResources, "Resources", 15, false). // Fixed width
+		AddColumn(columnKeyCtrEnvCount, "Env", 8, false).         // Fixed width
+		AddColumn(columnKeyCtrProbes, "Probes", 12, false).       // Fixed width
+		AddColumn(columnKeyCtrVolumes, "Volumes", 10, false)      // Fixed width
+
+	// Update dynamic column widths based on actual content
+	for _, ctr := range m.ctrs {
+		builder.UpdateWidthFromString(columnKeyCtrName, ctr.Name)
+	}
+
+	// Build columns with calculated widths
+	columns := builder.Build()
+
+	var rows []table.Row
+	if len(m.ctrs) > 0 {
+		rows = make([]table.Row, len(m.ctrs))
+		for i, ctr := range m.ctrs {
+			command := strings.Join(ctr.Command, " ")
+			if command == "" {
+				command = "-"
+			}
+
+			args := strings.Join(ctr.Args, " ")
+			if args == "" {
+				args = "-"
+			}
+
+			// Resources
+			resources := fmt.Sprintf("%.2gC/%.1s", ctr.CPU, ctr.Memory)
+			if ctr.CPU == 0 {
+				resources = "-"
+			}
+
+			// Environment variables count
+			envCount := fmt.Sprintf("%d", len(ctr.Env))
+			if len(ctr.Env) == 0 {
+				envCount = "-"
+			}
+
+			// Probes
+			probes := strings.Join(ctr.Probes, ",")
+			if probes == "" {
+				probes = "-"
+			}
+
+			// Volume mounts count
+			volumes := fmt.Sprintf("%d", len(ctr.VolumeMounts))
+			if len(ctr.VolumeMounts) == 0 {
+				volumes = "-"
+			}
+
+			rows[i] = table.NewRow(table.RowData{
+				columnKeyCtrName:      ctr.Name,
+				columnKeyCtrImage:     ctr.Image,
+				columnKeyCtrCommand:   command,
+				columnKeyCtrArgs:      args,
+				columnKeyCtrResources: resources,
+				columnKeyCtrEnvCount:  envCount,
+				columnKeyCtrProbes:    probes,
+				columnKeyCtrVolumes:   volumes,
+				columnKeyCtrStatus:    "Running", // Default status
+			})
+		}
+	} else {
+		// Create empty table with placeholder
+		rows = []table.Row{
+			table.NewRow(table.RowData{
+				columnKeyCtrName:      "No containers",
+				columnKeyCtrImage:     "",
+				columnKeyCtrCommand:   "",
+				columnKeyCtrArgs:      "",
+				columnKeyCtrResources: "",
+				columnKeyCtrEnvCount:  "",
+				columnKeyCtrProbes:    "",
+				columnKeyCtrVolumes:   "",
+				columnKeyCtrStatus:    "",
+			}),
+		}
+	}
+
+	t := table.New(columns).
+		WithRows(rows).
+		BorderRounded().
+		WithBaseStyle(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#a7a")).
+			BorderForeground(lipgloss.Color("#a38"))).
+		WithMaxTotalWidth(m.termW).
+		WithHorizontalFreezeColumnCount(1).
+		Filtered(true).
+		WithFilterInput(m.containersFilterInput).
+		Focused(true)
+
+	// Calculate height dynamically based on actual help and status bar heights
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+
+	// Available height = total height - help bar - status bar
+	availableHeight := m.termH - helpBarHeight - statusBarHeight
+	if availableHeight > 0 {
+		t = t.WithPageSize(availableHeight)
+	}
+
+	return t
+}
+
+// getContainersHelpKeys returns the key bindings for containers mode
+func (m model) getContainersHelpKeys() keyMap {
+	return keyMap{
+		Refresh:     m.keys.Refresh,
+		Filter:      m.keys.Filter,
+		Logs:        m.keys.Logs,
+		Exec:        m.keys.Exec,
+		EnvVars:     m.keys.EnvVars,
+		ScrollLeft:  m.keys.ScrollLeft,
+		ScrollRight: m.keys.ScrollRight,
+		Help:        m.keys.Help,
+		Back:        m.keys.Back,
+		Quit:        m.keys.Quit,
+	}
+}
 
 // Navigation functions
 func (m *model) leaveContainers() {
@@ -150,7 +287,7 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 		return m, m.azureCommands.ShowContainerLogs(a, m.currentRevName, selectedContainer.Name), true
 
-	case "e":
+	case "v":
 		if len(m.ctrs) == 0 {
 			return m, nil, true
 		}

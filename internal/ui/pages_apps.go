@@ -3,8 +3,164 @@ package ui
 import (
 	models "az-tui/internal/models"
 
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/evertras/bubble-table/table"
 )
+
+// createAppsTable creates a table component for container apps
+func (m model) createAppsTable() table.Model {
+	// Create dynamic column builder
+	builder := NewDynamicColumnBuilder().
+		AddColumn(columnKeyAppName, "Name", 15, true).                 // Dynamic width, min 15
+		AddColumn(columnKeyAppRG, "Resource Group", 18, true).         // Dynamic width, min 18
+		AddColumn(columnKeyAppLocation, "Location", 15, true).         // Fixed width
+		AddColumn(columnKeyAppStatus, "Status", 12, true).             // Fixed width
+		AddColumn(columnKeyAppReplicas, "Replicas", 10, false).        // Fixed width
+		AddColumn(columnKeyAppResources, "Resources", 12, false).      // Fixed width
+		AddColumn(columnKeyAppIngress, "Ingress", 18, false).          // Fixed width
+		AddColumn(columnKeyAppIdentity, "Identity", 15, false).        // Fixed width
+		AddColumn(columnKeyAppWorkload, "Workload", 15, false).        // Fixed width
+		AddColumn(columnKeyAppRevision, "Latest Revision", 30, false). // Fixed width
+		AddColumn(columnKeyAppFQDN, "FQDN", 60, false)                 // Fixed width (longest content)
+
+	// Update dynamic column widths based on actual content
+	for _, app := range m.apps {
+		builder.UpdateWidthFromString(columnKeyAppName, app.Name)
+		builder.UpdateWidthFromString(columnKeyAppRG, app.ResourceGroup)
+	}
+
+	// Build columns with calculated widths
+	columns := builder.Build()
+
+	var rows []table.Row
+	if len(m.apps) > 0 {
+		rows = make([]table.Row, len(m.apps))
+		for i, app := range m.apps {
+			fqdn := app.IngressFQDN
+			if fqdn == "" {
+				fqdn = "-"
+			}
+
+			status := app.RunningStatus
+			if status == "" {
+				status = app.ProvisioningState
+			}
+			if status == "" {
+				status = "Unknown"
+			}
+
+			// Format replicas
+			replicas := fmt.Sprintf("%d-%d", app.MinReplicas, app.MaxReplicas)
+			if app.MinReplicas == 0 && app.MaxReplicas == 0 {
+				replicas = "-"
+			}
+
+			// Format resources
+			resources := fmt.Sprintf("%.2gC/%.1s", app.CPU, app.Memory)
+			if app.CPU == 0 {
+				resources = "-"
+			}
+
+			// Format ingress
+			ingress := "None"
+			if app.IngressFQDN != "" {
+				if app.IngressExternal {
+					ingress = "External"
+				} else {
+					ingress = "Internal"
+				}
+				if app.TargetPort > 0 {
+					ingress += fmt.Sprintf(":%d", app.TargetPort)
+				}
+			}
+
+			// Format identity
+			identity := app.IdentityType
+			if identity == "" {
+				identity = "None"
+			}
+
+			// Format workload profile
+			workload := app.WorkloadProfile
+			if workload == "" {
+				workload = "Consumption"
+			}
+
+			rows[i] = table.NewRow(table.RowData{
+				columnKeyAppName:      app.Name,
+				columnKeyAppRG:        app.ResourceGroup,
+				columnKeyAppLocation:  app.Location,
+				columnKeyAppStatus:    status,
+				columnKeyAppReplicas:  replicas,
+				columnKeyAppResources: resources,
+				columnKeyAppIngress:   ingress,
+				columnKeyAppIdentity:  identity,
+				columnKeyAppWorkload:  workload,
+				columnKeyAppRevision:  app.LatestRevision,
+				columnKeyAppFQDN:      fqdn,
+			})
+		}
+	} else {
+		// Create empty table with placeholder
+		rows = []table.Row{
+			table.NewRow(table.RowData{
+				columnKeyAppName:      "Loading...",
+				columnKeyAppRG:        "",
+				columnKeyAppLocation:  "",
+				columnKeyAppStatus:    "",
+				columnKeyAppReplicas:  "",
+				columnKeyAppResources: "",
+				columnKeyAppIngress:   "",
+				columnKeyAppIdentity:  "",
+				columnKeyAppWorkload:  "",
+				columnKeyAppRevision:  "",
+				columnKeyAppFQDN:      "",
+			}),
+		}
+	}
+
+	t := table.New(columns).
+		WithRows(rows).
+		BorderRounded().
+		WithBaseStyle(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#a7a")).
+			BorderForeground(lipgloss.Color("#a38"))).
+		WithMaxTotalWidth(m.termW).
+		WithHorizontalFreezeColumnCount(1).
+		Filtered(true).
+		WithFilterInput(m.appsFilterInput).
+		Focused(true)
+
+	// Calculate height dynamically based on actual help and status bar heights
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+
+	// Available height = total height - help bar - status bar
+	availableHeight := m.termH - helpBarHeight - statusBarHeight
+	if availableHeight > 0 {
+		t = t.WithPageSize(availableHeight)
+	}
+
+	return t
+}
+
+// getAppsHelpKeys returns the key bindings for apps mode
+func (m model) getAppsHelpKeys() keyMap {
+	return keyMap{
+		Enter:       m.keys.Enter,
+		Refresh:     m.keys.Refresh,
+		Filter:      m.keys.Filter,
+		ScrollLeft:  m.keys.ScrollLeft,
+		ScrollRight: m.keys.ScrollRight,
+		Help:        m.keys.Help,
+		Quit:        m.keys.Quit,
+	}
+}
 
 // Message handlers
 func (m model) handleLoadedAppsMsg(msg loadedAppsMsg) (model, tea.Cmd) {
