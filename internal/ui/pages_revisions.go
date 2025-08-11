@@ -216,8 +216,8 @@ func (m model) handleRevisionRestartedMsg(msg revisionRestartedMsg) (model, tea.
 	m.statusLine = "Revision restart triggered."
 	// Optional: refresh revs/containers after a short delay or immediately
 	if a, ok := m.currentApp(); ok && appID(a) == msg.appID && m.currentRevName == msg.revName {
-		// you can choose to reload containers/revisions; often not needed immediately
-		// return m, LoadRevsCmd(a) // if you want to reflect status changes
+		// Reload revisions to reflect status changes after restart
+		return m, LoadRevsCmd(m.dataProvider, a)
 	}
 	return m, nil
 }

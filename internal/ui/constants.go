@@ -7,7 +7,6 @@ import (
 // Table column keys for Apps mode
 const (
 	columnKeyAppName      = "name"
-	columnKeyAppRG        = "rg"
 	columnKeyAppLocation  = "location"
 	columnKeyAppRevision  = "revision"
 	columnKeyAppFQDN      = "fqdn"
@@ -77,7 +76,6 @@ type revisionRestartedMsg struct {
 	appID   string
 	revName string
 	err     error
-	out     string
 }
 
 type loadedResourceGroupsMsg struct {

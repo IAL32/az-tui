@@ -130,7 +130,6 @@ type model struct {
 }
 
 // Messages
-type noop struct{}
 
 // Initialization
 func InitialModel(useMockMode bool) model {
