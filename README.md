@@ -131,12 +131,12 @@ Az-TUI uses the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framewo
 
 ## Roadmap
 
-- Fuzzy search
-- Subscription/environment switching
-- Show container replica health
-- Edit traffic split allocations
-- Browse Azure Container Apps Jobs
-- Integrate metrics (CPU/memory, HTTP rates)
+- [x] Fuzzy search
+- [ ] Subscription/environment switching
+- [ ] Show container replica health
+- [ ] Edit traffic split allocations
+- [ ] Browse Azure Container Apps Jobs
+- [ ] Integrate metrics (CPU/memory, HTTP rates)
 
 ## License
 

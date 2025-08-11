@@ -61,10 +61,9 @@ func (m model) createResourceGroupsTable() table.Model {
 	}
 	// Don't show any placeholder rows - empty table is fine
 
-	t := m.createUnifiedTable(columns, rows, m.resourceGroupsFilterInput).
+	return m.
+		createUnifiedTable(columns, rows, m.resourceGroupsFilterInput).
 		SortByAsc(columnKeyRGName)
-
-	return t
 }
 
 // getResourceGroupsHelpKeys returns the key bindings for resource groups mode

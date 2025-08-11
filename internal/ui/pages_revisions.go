@@ -38,9 +38,9 @@ func (m model) createRevisionsTable() table.Model {
 	if len(m.revs) > 0 {
 		rows = make([]table.Row, len(m.revs))
 		for i, rev := range m.revs {
-			activeMark := "·"
+			activeMark := "❌"
 			if rev.Active {
-				activeMark = "✓"
+				activeMark = "✅"
 			}
 
 			created := "-"
@@ -95,7 +95,7 @@ func (m model) createRevisionsTable() table.Model {
 
 			rows[i] = table.NewRow(table.RowData{
 				columnKeyRevName:      rev.Name,
-				columnKeyRevActive:    activeMark,
+				columnKeyRevActive:    table.NewStyledCell(activeMark, lipgloss.NewStyle().Align(lipgloss.Center)),
 				columnKeyRevTraffic:   fmt.Sprintf("%d%%", rev.Traffic),
 				columnKeyRevReplicas:  replicas,
 				columnKeyRevScaling:   scaling,
@@ -126,14 +126,9 @@ func (m model) createRevisionsTable() table.Model {
 		}
 	}
 
-	t := m.createUnifiedTable(columns, rows, m.revisionsFilterInput)
-
-	// Only sort if we have actual data
-	if len(m.revs) > 0 {
-		t = t.SortByDesc(columnKeyRevTraffic)
-	}
-
-	return t
+	return m.
+		createUnifiedTable(columns, rows, m.revisionsFilterInput).
+		SortByDesc(columnKeyRevTraffic)
 }
 
 // getRevisionsHelpKeys returns the key bindings for revisions mode
