@@ -308,19 +308,17 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewRevs() string {
-	title := fmt.Sprintf("Revisions — %s", m.getCurrentAppName())
-
 	if len(m.revs) == 0 && m.err == nil {
 		// Show loading state using generalized layout
-		return m.createLoadingLayout(title, "Loading revisions...")
+		return m.createLoadingLayout("Loading revisions...")
 	}
 
 	if m.err != nil && len(m.revs) == 0 {
 		// Show error state using generalized layout
-		return m.createErrorLayout(title, m.err.Error(), "[esc] back  [q] quit")
+		return m.createErrorLayout(m.err.Error(), "[esc] back  [q] quit")
 	}
 
 	// Show table view using generalized layout
 	tableView := m.revisionsTable.View()
-	return m.createTableLayout(title, tableView)
+	return m.createTableLayout(tableView)
 }

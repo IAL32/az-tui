@@ -6,6 +6,8 @@ func (m model) View() string {
 		return m.viewContainers()
 	case modeRevs:
 		return m.viewRevs()
+	case modeEnvVars:
+		return m.viewEnvVars()
 	default:
 		return m.viewApps()
 	}

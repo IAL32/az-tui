@@ -20,6 +20,7 @@ const (
 	modeApps mode = iota
 	modeRevs
 	modeContainers
+	modeEnvVars
 )
 
 // Types
@@ -75,19 +76,22 @@ type model struct {
 	appsTable       table.Model
 	revisionsTable  table.Model
 	containersTable table.Model
+	envVarsTable    table.Model
 
 	// Filter text inputs for each mode
 	appsFilterInput       textinput.Model
 	revisionsFilterInput  textinput.Model
 	containersFilterInput textinput.Model
+	envVarsFilterInput    textinput.Model
 
 	// Help system
 	help help.Model
 	keys keyMap
 
 	// Context for navigation
-	currentAppID   string // When viewing revisions
-	currentRevName string // When viewing containers
+	currentAppID         string // When viewing revisions
+	currentRevName       string // When viewing containers
+	currentContainerName string // When viewing environment variables
 
 	// Optional caches for performance
 	containersByRev map[string][]models.Container // key: revKey(appID, revName)
@@ -153,6 +157,7 @@ func InitialModel() model {
 	m.appsTable = m.createAppsTable()
 	m.revisionsTable = m.createRevisionsTable()
 	m.containersTable = m.createContainersTable()
+	m.envVarsTable = m.createEnvVarsTable()
 
 	// Initialize filter text inputs
 	m.appsFilterInput = textinput.New()
@@ -161,6 +166,8 @@ func InitialModel() model {
 	m.revisionsFilterInput.Placeholder = "Filter revisions..."
 	m.containersFilterInput = textinput.New()
 	m.containersFilterInput.Placeholder = "Filter containers..."
+	m.envVarsFilterInput = textinput.New()
+	m.envVarsFilterInput.Placeholder = "Filter environment variables..."
 
 	// Initialize help system
 	m.help = help.New()

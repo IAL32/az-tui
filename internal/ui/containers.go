@@ -2,7 +2,6 @@ package ui
 
 import (
 	models "az-tui/internal/models"
-	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -172,6 +171,43 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 		return m, m.azureCommands.ShowContainerLogs(a, m.currentRevName, selectedContainer.Name), true
 
+	case "e":
+		if len(m.ctrs) == 0 {
+			return m, nil, true
+		}
+
+		// Get selected container from table
+		selectedRow := m.containersTable.HighlightedRow()
+		if selectedRow.Data == nil {
+			return m, nil, true
+		}
+
+		containerName, ok := selectedRow.Data[columnKeyCtrName].(string)
+		if !ok {
+			return m, nil, true
+		}
+
+		// Find the container by name
+		var selectedContainer models.Container
+		found := false
+		for _, ctr := range m.ctrs {
+			if ctr.Name == containerName {
+				selectedContainer = ctr
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return m, nil, true
+		}
+
+		// Enter environment variables mode
+		m.mode = modeEnvVars
+		m.currentContainerName = selectedContainer.Name
+		m.envVarsTable = m.createEnvVarsTable()
+		return m, nil, true
+
 	case "esc":
 		m.leaveContainers()
 		return m, nil, true
@@ -182,19 +218,17 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewContainers() string {
-	title := fmt.Sprintf("Containers — %s@%s", m.getCurrentAppName(), m.currentRevName)
-
 	if len(m.ctrs) == 0 && m.err == nil {
 		// Show loading state using generalized layout
-		return m.createLoadingLayout(title, "Loading containers...")
+		return m.createLoadingLayout("Loading containers...")
 	}
 
 	if m.err != nil && len(m.ctrs) == 0 {
 		// Show error state using generalized layout
-		return m.createErrorLayout(title, m.err.Error(), "[esc] back  [q] quit")
+		return m.createErrorLayout(m.err.Error(), "[esc] back  [q] quit")
 	}
 
 	// Show table view using generalized layout
 	tableView := m.containersTable.View()
-	return m.createTableLayout(title, tableView)
+	return m.createTableLayout(tableView)
 }

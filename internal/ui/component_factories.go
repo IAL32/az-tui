@@ -158,10 +158,16 @@ func (m model) createAppsTable() table.Model {
 		WithFilterInput(m.appsFilterInput).
 		Focused(true)
 
-	// Calculate height: total height - title (1) - help (1) - status (1) - margins (2)
-	tableHeight := m.termH - 5
-	if tableHeight > 0 {
-		t = t.WithPageSize(tableHeight)
+	// Calculate height dynamically based on actual help and status bar heights
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+
+	// Available height = total height - help bar - status bar
+	availableHeight := m.termH - helpBarHeight - statusBarHeight
+	if availableHeight > 0 {
+		t = t.WithPageSize(availableHeight)
 	}
 
 	return t
@@ -308,10 +314,16 @@ func (m model) createRevisionsTable() table.Model {
 		t = t.SortByDesc(columnKeyRevTraffic)
 	}
 
-	// Calculate height: total height - title (1) - help (1) - status (1) - margins (2)
-	tableHeight := m.termH - 5
-	if tableHeight > 0 {
-		t = t.WithPageSize(tableHeight)
+	// Calculate height dynamically based on actual help and status bar heights
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+
+	// Available height = total height - help bar - status bar
+	availableHeight := m.termH - helpBarHeight - statusBarHeight
+	if availableHeight > 0 {
+		t = t.WithPageSize(availableHeight)
 	}
 
 	return t
@@ -426,10 +438,112 @@ func (m model) createContainersTable() table.Model {
 		WithFilterInput(m.containersFilterInput).
 		Focused(true)
 
-	// Calculate height: total height - title (1) - help (1) - status (1) - margins (2)
-	tableHeight := m.termH - 5
-	if tableHeight > 0 {
-		t = t.WithPageSize(tableHeight)
+	// Calculate height dynamically based on actual help and status bar heights
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+
+	// Available height = total height - help bar - status bar
+	availableHeight := m.termH - helpBarHeight - statusBarHeight
+	if availableHeight > 0 {
+		t = t.WithPageSize(availableHeight)
+	}
+
+	return t
+}
+
+// createEnvVarsTable creates a table component for environment variables
+func (m model) createEnvVarsTable() table.Model {
+	// Calculate dynamic widths for Name and Value columns based on content
+	nameWidth := len("Name")
+	valueWidth := len("Value")
+
+	// Find maximum width needed for Name and Value columns
+	if m.currentContainerName != "" {
+		for _, ctr := range m.ctrs {
+			if ctr.Name == m.currentContainerName {
+				for name, value := range ctr.Env {
+					if len(name) > nameWidth {
+						nameWidth = len(name)
+					}
+					if len(value) > valueWidth {
+						valueWidth = len(value)
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// Add padding and set minimum widths
+	nameWidth += 2
+	valueWidth += 2
+	if nameWidth < 15 {
+		nameWidth = 15
+	}
+	if valueWidth < 20 {
+		valueWidth = 20
+	}
+
+	columns := []table.Column{
+		table.NewColumn("name", "Name", nameWidth).WithFiltered(true),    // Dynamic width based on content
+		table.NewColumn("value", "Value", valueWidth).WithFiltered(true), // Dynamic width based on content
+	}
+
+	var rows []table.Row
+	if m.currentContainerName != "" {
+		// Find the current container and get its environment variables
+		for _, ctr := range m.ctrs {
+			if ctr.Name == m.currentContainerName {
+				if len(ctr.Env) > 0 {
+					rows = make([]table.Row, 0, len(ctr.Env))
+					for name, value := range ctr.Env {
+						rows = append(rows, table.NewRow(table.RowData{
+							"name":  name,
+							"value": value,
+						}))
+					}
+				}
+				break
+			}
+		}
+	}
+
+	if len(rows) == 0 {
+		// Create empty table with placeholder
+		rows = []table.Row{
+			table.NewRow(table.RowData{
+				"name":  "No environment variables",
+				"value": "",
+			}),
+		}
+	}
+
+	t := table.New(columns).
+		WithRows(rows).
+		BorderRounded().
+		WithBaseStyle(lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#a7a")).
+			BorderForeground(lipgloss.Color("#a38"))).
+		WithMaxTotalWidth(m.termW).
+		WithHorizontalFreezeColumnCount(1).
+		Filtered(true).
+		WithFilterInput(m.envVarsFilterInput).
+		Focused(true)
+
+	// Calculate height dynamically based on actual help and status bar heights
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+
+	// Available height = total height - help bar - status bar - table overhead (6 lines)
+	// Conservative calculation to ensure table header stays visible
+	// Accounts for: borders, header, filter area, and extra margin
+	availableHeight := m.termH - helpBarHeight - statusBarHeight - 6
+	if availableHeight > 0 {
+		t = t.WithPageSize(availableHeight)
 	}
 
 	return t
@@ -481,6 +595,8 @@ func (m model) createStatusBar() string {
 		modeIndicator = modeRevisionsStyle.Render("REVISIONS")
 	case modeContainers:
 		modeIndicator = modeContainersStyle.Render("CONTAINERS")
+	case modeEnvVars:
+		modeIndicator = modeContainersStyle.Render("ENV VARS")
 	}
 
 	// Status indicator
@@ -495,6 +611,8 @@ func (m model) createStatusBar() string {
 		filterActive = m.revisionsFilterInput.Focused()
 	case modeContainers:
 		filterActive = m.containersFilterInput.Focused()
+	case modeEnvVars:
+		filterActive = m.envVarsFilterInput.Focused()
 	}
 
 	if filterActive {
@@ -529,6 +647,22 @@ func (m model) createStatusBar() string {
 		} else {
 			countIndicator = countStyle.Render(fmt.Sprintf("%d Containers", len(m.ctrs)))
 		}
+	case modeEnvVars:
+		// Count environment variables for the current container
+		envCount := 0
+		if m.currentContainerName != "" {
+			for _, ctr := range m.ctrs {
+				if ctr.Name == m.currentContainerName {
+					envCount = len(ctr.Env)
+					break
+				}
+			}
+		}
+		if envCount == 1 {
+			countIndicator = countStyle.Render("1 Env Var")
+		} else {
+			countIndicator = countStyle.Render(fmt.Sprintf("%d Env Vars", envCount))
+		}
 	}
 
 	// Context indicator (for deeper navigation levels)
@@ -541,6 +675,10 @@ func (m model) createStatusBar() string {
 	case modeContainers:
 		if appName := m.getCurrentAppName(); appName != "" && m.currentRevName != "" {
 			contextIndicator = contextStyle.Render(fmt.Sprintf("App: %s@%s", appName, m.currentRevName))
+		}
+	case modeEnvVars:
+		if appName := m.getCurrentAppName(); appName != "" && m.currentRevName != "" && m.currentContainerName != "" {
+			contextIndicator = contextStyle.Render(fmt.Sprintf("Container: %s@%s/%s", appName, m.currentRevName, m.currentContainerName))
 		}
 	}
 
@@ -569,6 +707,8 @@ func (m model) createStatusBar() string {
 				statusMessage = "Loading revisions..."
 			case modeContainers:
 				statusMessage = "Loading containers..."
+			case modeEnvVars:
+				statusMessage = "Loading environment variables..."
 			}
 		} else {
 			// When ready, show empty message since status indicator already shows "Ready"
@@ -606,19 +746,68 @@ func max(a, b int) int {
 	return b
 }
 
-// Help bar component factory - now uses bubble help
+// Help bar component factory - creates mode-specific help on the fly
 func (m model) createHelpBar() string {
-	return m.help.View(m.keys)
+	// Create mode-specific key bindings on the fly
+	var modeKeys keyMap
+
+	switch m.mode {
+	case modeApps:
+		modeKeys = keyMap{
+			Enter:       m.keys.Enter,
+			Refresh:     m.keys.Refresh,
+			Filter:      m.keys.Filter,
+			ScrollLeft:  m.keys.ScrollLeft,
+			ScrollRight: m.keys.ScrollRight,
+			Help:        m.keys.Help,
+			Quit:        m.keys.Quit,
+		}
+	case modeRevs:
+		modeKeys = keyMap{
+			Enter:       m.keys.Enter,
+			Refresh:     m.keys.Refresh,
+			RestartRev:  m.keys.RestartRev,
+			Filter:      m.keys.Filter,
+			ScrollLeft:  m.keys.ScrollLeft,
+			ScrollRight: m.keys.ScrollRight,
+			Help:        m.keys.Help,
+			Back:        m.keys.Back,
+			Quit:        m.keys.Quit,
+		}
+	case modeContainers:
+		modeKeys = keyMap{
+			Enter:       m.keys.Enter,
+			Refresh:     m.keys.Refresh,
+			Filter:      m.keys.Filter,
+			Logs:        m.keys.Logs,
+			Exec:        m.keys.Exec,
+			ScrollLeft:  m.keys.ScrollLeft,
+			ScrollRight: m.keys.ScrollRight,
+			Help:        m.keys.Help,
+			Back:        m.keys.Back,
+			Quit:        m.keys.Quit,
+		}
+	case modeEnvVars:
+		// Environment variables mode is read-only - no action keys
+		modeKeys = keyMap{
+			Filter:      m.keys.Filter,
+			ScrollLeft:  m.keys.ScrollLeft,
+			ScrollRight: m.keys.ScrollRight,
+			Help:        m.keys.Help,
+			Back:        m.keys.Back,
+			Quit:        m.keys.Quit,
+		}
+	default:
+		modeKeys = m.keys
+	}
+
+	return m.help.View(modeKeys)
 }
 
 // General layout manager for consistent UI structure
-func (m model) createLayout(title string, content string) string {
-	// Create the main content area (title + content only)
-	mainContent := lipgloss.JoinVertical(
-		lipgloss.Left,
-		styleTitle.Render(title),
-		content,
-	)
+func (m model) createLayout(content string) string {
+	// Create the main content area (content only, no title)
+	mainContent := content
 
 	// Create the bottom bars
 	helpBar := m.createHelpBar()
@@ -644,18 +833,18 @@ func (m model) createLayout(title string, content string) string {
 }
 
 // Loading state layout
-func (m model) createLoadingLayout(title string, message string) string {
+func (m model) createLoadingLayout(message string) string {
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		"",
 		styleAccent.Render(message),
 		"",
 	)
-	return m.createLayout(title, content)
+	return m.createLayout(content)
 }
 
 // Error state layout
-func (m model) createErrorLayout(title string, errorMsg string, helpMsg string) string {
+func (m model) createErrorLayout(errorMsg string, helpMsg string) string {
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		"",
@@ -663,10 +852,10 @@ func (m model) createErrorLayout(title string, errorMsg string, helpMsg string) 
 		styleAccent.Render(helpMsg),
 		"",
 	)
-	return m.createLayout(title, content)
+	return m.createLayout(content)
 }
 
 // Table layout
-func (m model) createTableLayout(title string, tableView string) string {
-	return m.createLayout(title, tableView)
+func (m model) createTableLayout(tableView string) string {
+	return m.createLayout(tableView)
 }

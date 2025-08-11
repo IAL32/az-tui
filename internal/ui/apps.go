@@ -188,19 +188,17 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewApps() string {
-	title := "Container Apps"
-
 	if m.loading && len(m.apps) == 0 {
 		// Show loading state using generalized layout
-		return m.createLoadingLayout(title, "Loading container apps...")
+		return m.createLoadingLayout("Loading container apps...")
 	}
 
 	if m.err != nil && len(m.apps) == 0 {
 		// Show error state using generalized layout
-		return m.createErrorLayout(title, m.err.Error(), "Press r to retry or q to quit.")
+		return m.createErrorLayout(m.err.Error(), "Press r to retry or q to quit.")
 	}
 
 	// Show table view using generalized layout
 	tableView := m.appsTable.View()
-	return m.createTableLayout(title, tableView)
+	return m.createTableLayout(tableView)
 }

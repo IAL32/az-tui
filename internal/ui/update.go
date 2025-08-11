@@ -39,6 +39,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if nm, cmd, handled := m.handleContainersKey(msg); handled {
 				return nm, cmd
 			}
+		case modeEnvVars:
+			if nm, cmd, handled := m.handleEnvVarsKey(msg); handled {
+				return nm, cmd
+			}
 		}
 
 		// Handle table navigation for unhandled keys
@@ -50,6 +54,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.revisionsTable, cmd = m.revisionsTable.Update(msg)
 		case modeContainers:
 			m.containersTable, cmd = m.containersTable.Update(msg)
+		case modeEnvVars:
+			m.envVarsTable, cmd = m.envVarsTable.Update(msg)
 		}
 
 		if cmd != nil {
