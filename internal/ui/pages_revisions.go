@@ -229,6 +229,8 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		switch msg.String() {
 		case "enter":
 			m.revisionsFilterInput.Blur()
+			// Sync the filter with the table after applying
+			m.revisionsTable = m.revisionsTable.WithFilterInput(m.revisionsFilterInput)
 			return m, nil, true
 		case "esc":
 			m.revisionsFilterInput.SetValue("")
@@ -250,7 +252,9 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
+		m.revisionsFilterInput.SetValue("") // Clear any existing value
 		m.revisionsFilterInput.Focus()
+		m.revisionsTable = m.revisionsTable.WithFilterInput(m.revisionsFilterInput)
 		return m, nil, true
 	case "enter":
 		if len(m.revs) == 0 {

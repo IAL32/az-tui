@@ -57,17 +57,8 @@ func (m model) createResourceGroupsTable() table.Model {
 				columnKeyRGTags:     tags,
 			})
 		}
-	} else {
-		// Create empty table with placeholder
-		rows = []table.Row{
-			table.NewRow(table.RowData{
-				columnKeyRGName:     "Loading...",
-				columnKeyRGLocation: "",
-				columnKeyRGState:    "",
-				columnKeyRGTags:     "",
-			}),
-		}
 	}
+	// Don't show any placeholder rows - empty table is fine
 
 	t := table.New(columns).
 		WithRows(rows).
@@ -79,7 +70,8 @@ func (m model) createResourceGroupsTable() table.Model {
 		WithHorizontalFreezeColumnCount(1).
 		Filtered(true).
 		WithFilterInput(m.resourceGroupsFilterInput).
-		Focused(true)
+		Focused(true).
+		SortByAsc(columnKeyRGName)
 
 	// Calculate height dynamically based on actual help and status bar heights
 	helpBar := m.createHelpBar()
@@ -137,6 +129,8 @@ func (m model) handleResourceGroupsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		switch msg.String() {
 		case "enter":
 			m.resourceGroupsFilterInput.Blur()
+			// Sync the filter with the table after applying
+			m.resourceGroupsTable = m.resourceGroupsTable.WithFilterInput(m.resourceGroupsFilterInput)
 			return m, nil, true
 		case "esc":
 			m.resourceGroupsFilterInput.SetValue("")
@@ -158,7 +152,9 @@ func (m model) handleResourceGroupsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
+		m.resourceGroupsFilterInput.SetValue("") // Clear any existing value
 		m.resourceGroupsFilterInput.Focus()
+		m.resourceGroupsTable = m.resourceGroupsTable.WithFilterInput(m.resourceGroupsFilterInput)
 		return m, nil, true
 	case "enter":
 		if len(m.resourceGroups) == 0 {

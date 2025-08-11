@@ -179,6 +179,8 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		switch msg.String() {
 		case "enter":
 			m.containersFilterInput.Blur()
+			// Sync the filter with the table after applying
+			m.containersTable = m.containersTable.WithFilterInput(m.containersFilterInput)
 			return m, nil, true
 		case "esc":
 			m.containersFilterInput.SetValue("")
@@ -200,7 +202,9 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
+		m.containersFilterInput.SetValue("") // Clear any existing value
 		m.containersFilterInput.Focus()
+		m.containersTable = m.containersTable.WithFilterInput(m.containersFilterInput)
 		return m, nil, true
 	case "r":
 		// Refresh containers list - clear data and show loading state

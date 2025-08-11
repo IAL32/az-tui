@@ -113,6 +113,8 @@ func (m model) handleEnvVarsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		switch msg.String() {
 		case "enter":
 			m.envVarsFilterInput.Blur()
+			// Sync the filter with the table after applying
+			m.envVarsTable = m.envVarsTable.WithFilterInput(m.envVarsFilterInput)
 			return m, nil, true
 		case "esc":
 			m.envVarsFilterInput.SetValue("")
@@ -134,7 +136,9 @@ func (m model) handleEnvVarsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
+		m.envVarsFilterInput.SetValue("") // Clear any existing value
 		m.envVarsFilterInput.Focus()
+		m.envVarsTable = m.envVarsTable.WithFilterInput(m.envVarsFilterInput)
 		return m, nil, true
 	case "esc":
 		m.leaveEnvVars()

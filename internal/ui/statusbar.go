@@ -37,6 +37,8 @@ func (m model) createStatusBar() string {
 		filterActive = m.containersFilterInput.Focused()
 	case modeEnvVars:
 		filterActive = m.envVarsFilterInput.Focused()
+	case modeResourceGroups:
+		filterActive = m.resourceGroupsFilterInput.Focused()
 	}
 
 	if filterActive {

@@ -15,7 +15,6 @@ func (m model) createAppsTable() table.Model {
 	// Create dynamic column builder
 	builder := NewDynamicColumnBuilder().
 		AddColumn(columnKeyAppName, "Name", 15, true).                 // Dynamic width, min 15
-		AddColumn(columnKeyAppRG, "Resource Group", 18, true).         // Dynamic width, min 18
 		AddColumn(columnKeyAppLocation, "Location", 15, true).         // Fixed width
 		AddColumn(columnKeyAppStatus, "Status", 12, true).             // Fixed width
 		AddColumn(columnKeyAppReplicas, "Replicas", 10, false).        // Fixed width
@@ -29,7 +28,6 @@ func (m model) createAppsTable() table.Model {
 	// Update dynamic column widths based on actual content
 	for _, app := range m.apps {
 		builder.UpdateWidthFromString(columnKeyAppName, app.Name)
-		builder.UpdateWidthFromString(columnKeyAppRG, app.ResourceGroup)
 	}
 
 	// Build columns with calculated widths
@@ -91,7 +89,6 @@ func (m model) createAppsTable() table.Model {
 
 			rows[i] = table.NewRow(table.RowData{
 				columnKeyAppName:      app.Name,
-				columnKeyAppRG:        app.ResourceGroup,
 				columnKeyAppLocation:  app.Location,
 				columnKeyAppStatus:    status,
 				columnKeyAppReplicas:  replicas,
@@ -103,24 +100,8 @@ func (m model) createAppsTable() table.Model {
 				columnKeyAppFQDN:      fqdn,
 			})
 		}
-	} else {
-		// Create empty table with placeholder
-		rows = []table.Row{
-			table.NewRow(table.RowData{
-				columnKeyAppName:      "Loading...",
-				columnKeyAppRG:        "",
-				columnKeyAppLocation:  "",
-				columnKeyAppStatus:    "",
-				columnKeyAppReplicas:  "",
-				columnKeyAppResources: "",
-				columnKeyAppIngress:   "",
-				columnKeyAppIdentity:  "",
-				columnKeyAppWorkload:  "",
-				columnKeyAppRevision:  "",
-				columnKeyAppFQDN:      "",
-			}),
-		}
 	}
+	// Don't show any placeholder rows - empty table is fine
 
 	t := table.New(columns).
 		WithRows(rows).
@@ -189,6 +170,8 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		switch msg.String() {
 		case "enter":
 			m.appsFilterInput.Blur()
+			// Sync the filter with the table after applying
+			m.appsTable = m.appsTable.WithFilterInput(m.appsFilterInput)
 			return m, nil, true
 		case "esc":
 			m.appsFilterInput.SetValue("")
@@ -210,7 +193,9 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
+		m.appsFilterInput.SetValue("") // Clear any existing value
 		m.appsFilterInput.Focus()
+		m.appsTable = m.appsTable.WithFilterInput(m.appsFilterInput)
 		return m, nil, true
 	case "enter":
 		if len(m.apps) == 0 {
