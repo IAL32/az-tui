@@ -178,7 +178,7 @@ func (m *model) enterRevsFor(a models.ContainerApp) tea.Cmd {
 	m.mode = modeRevs
 	m.currentAppID = appID(a)
 
-	return LoadRevsCmd(a)
+	return LoadRevsCmd(m.dataProvider, a)
 }
 
 func (m *model) leaveRevs() {
@@ -297,7 +297,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 		// Clear containers and load new ones
 		m.ctrs = nil
-		return m, LoadContainersCmd(a, selectedRev.Name), true
+		return m, LoadContainersCmd(m.dataProvider, a, selectedRev.Name), true
 
 	case "r":
 		// Refresh revisions list - clear data and show loading state
@@ -307,7 +307,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		}
 		m.revs = nil
 		m.revisionsTable = m.createRevisionsTable()
-		return m, LoadRevsCmd(a), true
+		return m, LoadRevsCmd(m.dataProvider, a), true
 
 	case "R":
 		if len(m.revs) == 0 {
@@ -357,7 +357,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 			txt,
 			func(mm model) (model, tea.Cmd) {
 				mm.statusLine = "Restarting revision..."
-				return mm, RestartRevisionCmd(a, selectedRev.Name)
+				return mm, mm.commandProvider.RestartRevision(a, selectedRev.Name)
 			},
 			nil, // no action on cancel
 		)
@@ -399,7 +399,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ExecIntoRevision(a, selectedRev.Name), true
+		return m, m.commandProvider.ExecIntoRevision(a, selectedRev.Name), true
 
 	case "l":
 		if len(m.revs) == 0 {
@@ -437,7 +437,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ShowRevisionLogs(a, selectedRev.Name), true
+		return m, m.commandProvider.ShowRevisionLogs(a, selectedRev.Name), true
 
 	case "esc":
 		m.leaveRevs()

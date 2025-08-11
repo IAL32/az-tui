@@ -214,7 +214,7 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		}
 		m.ctrs = nil
 		m.containersTable = m.createContainersTable()
-		return m, LoadContainersCmd(a, m.currentRevName), true
+		return m, LoadContainersCmd(m.dataProvider, a, m.currentRevName), true
 	case "s":
 		if len(m.ctrs) == 0 {
 			return m, nil, true
@@ -251,7 +251,7 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ExecIntoContainer(a, m.currentRevName, selectedContainer.Name), true
+		return m, m.commandProvider.ExecIntoContainer(a, m.currentRevName, selectedContainer.Name), true
 
 	case "l":
 		if len(m.ctrs) == 0 {
@@ -289,7 +289,7 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ShowContainerLogs(a, m.currentRevName, selectedContainer.Name), true
+		return m, m.commandProvider.ShowContainerLogs(a, m.currentRevName, selectedContainer.Name), true
 
 	case "v":
 		if len(m.ctrs) == 0 {

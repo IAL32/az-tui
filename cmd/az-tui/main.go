@@ -12,13 +12,19 @@ import (
 
 func main() {
 	showVersion := flag.Bool("version", false, "print version and exit")
+	mockMode := flag.Bool("mock", false, "use mock data instead of Azure CLI")
+	mockModeShort := flag.Bool("m", false, "use mock data instead of Azure CLI (shorthand)")
 	flag.Parse()
+
 	if *showVersion {
 		fmt.Printf("az-tui %s (%s, %s)\n", build.Version, build.Commit, build.Date)
 		os.Exit(0)
 	}
 
-	model := ui.InitialModel()
+	// Use mock mode if either flag is set
+	useMockMode := *mockMode || *mockModeShort
+
+	model := ui.InitialModel(useMockMode)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {

@@ -10,6 +10,7 @@ Az-TUI is a **terminal-based user interface (TUI)** for managing Azure Container
 - **Tail logs** for apps, revisions, or containers.
 - **Exec into running containers** for debugging.
 - **Keyboard-driven navigation** with familiar shortcuts.
+- **Mock data mode** for development and testing without Azure CLI dependencies.
 
 ## Key Bindings
 
@@ -81,6 +82,8 @@ go install github.com/IAL32/az-tui/cmd/az-tui@latest
 
 ## Usage
 
+### Standard Mode (Azure CLI)
+
 (Optional) restrict to a resource group:
 
 ```bash
@@ -93,6 +96,23 @@ Run:
 ./az-tui
 ```
 
+### Mock Data Mode
+
+For development, testing, or demonstration purposes, you can run Az-TUI with mock data instead of connecting to Azure:
+
+```bash
+./az-tui --mock
+# or
+./az-tui -m
+```
+
+Mock mode provides a comprehensive dataset including:
+- 4 resource groups (production, staging, development, shared services)
+- 8 container apps across different environments
+- Multiple revisions per app with realistic configurations
+- Containers with environment variables, probes, and volume mounts
+- Realistic Azure Container Apps scenarios for testing UI functionality
+
 Navigate with arrow keys or `j`/`k`, drill down with `Enter`, and use the key bindings above for actions.
 
 ## Architecture
@@ -100,7 +120,9 @@ Navigate with arrow keys or `j`/`k`, drill down with `Enter`, and use the key bi
 Az-TUI uses the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework:
 
 - **Modes:** `resource groups` → `apps` → `revisions` → `containers` → `environment variables`
+- **Data providers:** Pluggable architecture supporting both Azure CLI and mock data sources
 - **Azure CLI integration:** Fetches data using `az containerapp` and `az group` commands
+- **Mock data system:** JSON-based mock data for development and testing
 - **UI Components:** Bubble Table for data display with filtering and navigation
 - **Asynchronous updates:** Commands run in background and update the model via messages
 - **Help system:** Built-in help with `?` key showing context-sensitive keybindings

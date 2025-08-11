@@ -51,11 +51,7 @@ func ListContainerApps(ctx context.Context, rg string) ([]m.ContainerApp, error)
 	if err != nil {
 		return nil, err
 	}
-	var apps []m.ContainerApp
-	if err := json.Unmarshal([]byte(raw), &apps); err != nil {
-		return nil, err
-	}
-	return apps, nil
+	return TransformContainerAppsFromJSON(raw)
 }
 
 func GetAppDetails(ctx context.Context, name, rg string) (string, error) {
@@ -90,11 +86,7 @@ func ListRevisions(ctx context.Context, name string, rg string) ([]m.Revision, e
 	if err != nil {
 		return nil, err
 	}
-	var revs []m.Revision
-	if err := json.Unmarshal([]byte(raw), &revs); err != nil {
-		return nil, err
-	}
-	return revs, nil
+	return TransformRevisionsFromJSON(raw)
 }
 func ListContainersCmd(ctx context.Context, ct m.ContainerApp, revName string) ([]m.Container, error) {
 	// az containerapp revision show --name <app> --resource-group <rg> --revision <rev>
@@ -103,73 +95,7 @@ func ListContainersCmd(ctx context.Context, ct m.ContainerApp, revName string) (
 	if err != nil {
 		return nil, err
 	}
-
-	// Parse containers with enhanced data
-	var resp struct {
-		Properties struct {
-			Template struct {
-				Containers []struct {
-					Name      string   `json:"name"`
-					Image     string   `json:"image"`
-					Command   []string `json:"command"`
-					Args      []string `json:"args"`
-					Resources struct {
-						CPU    float64 `json:"cpu"`
-						Memory string  `json:"memory"`
-					} `json:"resources"`
-					Env []struct {
-						Name  string `json:"name"`
-						Value string `json:"value"`
-					} `json:"env"`
-					Probes []struct {
-						Type string `json:"type"`
-					} `json:"probes"`
-					VolumeMounts []struct {
-						MountPath  string `json:"mountPath"`
-						VolumeName string `json:"volumeName"`
-					} `json:"volumeMounts"`
-				} `json:"containers"`
-			} `json:"template"`
-		} `json:"properties"`
-	}
-	if jerr := json.Unmarshal([]byte(raw), &resp); jerr != nil {
-		return nil, jerr
-	}
-
-	cs := make([]m.Container, 0, len(resp.Properties.Template.Containers))
-	for _, c := range resp.Properties.Template.Containers {
-		// Convert env vars to map
-		envMap := make(map[string]string)
-		for _, env := range c.Env {
-			envMap[env.Name] = env.Value
-		}
-
-		// Extract probe types
-		var probes []string
-		for _, probe := range c.Probes {
-			probes = append(probes, probe.Type)
-		}
-
-		// Extract volume mounts
-		var volumeMounts []string
-		for _, vm := range c.VolumeMounts {
-			volumeMounts = append(volumeMounts, fmt.Sprintf("%s:%s", vm.VolumeName, vm.MountPath))
-		}
-
-		container := m.Container{
-			Name:         c.Name,
-			Image:        c.Image,
-			Command:      c.Command,
-			Args:         c.Args,
-			CPU:          c.Resources.CPU,
-			Memory:       c.Resources.Memory,
-			Env:          envMap,
-			Probes:       probes,
-			VolumeMounts: volumeMounts,
-		}
-		cs = append(cs, container)
-	}
-	return cs, nil
+	return TransformContainersFromJSON(raw)
 }
 
 func ListResourceGroups(ctx context.Context) ([]m.ResourceGroup, error) {
@@ -183,9 +109,5 @@ func ListResourceGroups(ctx context.Context) ([]m.ResourceGroup, error) {
 	if err != nil {
 		return nil, err
 	}
-	var rgs []m.ResourceGroup
-	if err := json.Unmarshal([]byte(raw), &rgs); err != nil {
-		return nil, err
-	}
-	return rgs, nil
+	return TransformResourceGroupsFromJSON(raw)
 }

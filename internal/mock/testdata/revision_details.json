@@ -1,0 +1,492 @@
+{
+  "web-frontend-prod-web-frontend-prod--v2-3": {
+    "id": "/subscriptions/12345/resourceGroups/rg-production-eastus/providers/Microsoft.App/containerApps/web-frontend-prod/revisions/web-frontend-prod--v2-3",
+    "name": "web-frontend-prod--v2-3",
+    "type": "Microsoft.App/containerApps/revisions",
+    "properties": {
+      "createdTime": "2024-01-20T10:00:00Z",
+      "lastActiveTime": "2024-01-20T10:00:00Z",
+      "fqdn": "web-frontend-prod.proudocean-12345.eastus.azurecontainerapps.io",
+      "template": {
+        "revisionSuffix": "v2-3",
+        "containers": [
+          {
+            "name": "web-app",
+            "image": "myregistry.azurecr.io/web-frontend:v2.3",
+            "command": [],
+            "args": [],
+            "resources": {
+              "cpu": 1.0,
+              "memory": "2Gi"
+            },
+            "env": [
+              {
+                "name": "NODE_ENV",
+                "value": "production"
+              },
+              {
+                "name": "API_BASE_URL",
+                "value": "https://api-backend-prod.internal.proudocean-12345.eastus.azurecontainerapps.io"
+              },
+              {
+                "name": "LOG_LEVEL",
+                "value": "info"
+              },
+              {
+                "name": "REDIS_URL",
+                "value": "redis://redis-prod.internal:6379"
+              },
+              {
+                "name": "DATABASE_URL",
+                "value": "postgresql://prod-db.postgres.database.azure.com:5432/webapp"
+              },
+              {
+                "name": "JWT_SECRET",
+                "value": "***"
+              },
+              {
+                "name": "AZURE_CLIENT_ID",
+                "value": "12345678-1234-1234-1234-123456789012"
+              }
+            ],
+            "probes": [
+              {
+                "type": "liveness"
+              },
+              {
+                "type": "readiness"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "volumeName": "config-volume",
+                "mountPath": "/app/config"
+              },
+              {
+                "volumeName": "logs-volume",
+                "mountPath": "/app/logs"
+              }
+            ]
+          }
+        ],
+        "scale": {
+          "minReplicas": 2,
+          "maxReplicas": 10
+        }
+      },
+      "active": true,
+      "replicas": 3,
+      "trafficWeight": 100,
+      "provisioningState": "Succeeded",
+      "healthState": "Healthy",
+      "runningState": "Running"
+    }
+  },
+  "api-backend-prod-api-backend-prod--v1-8": {
+    "id": "/subscriptions/12345/resourceGroups/rg-production-eastus/providers/Microsoft.App/containerApps/api-backend-prod/revisions/api-backend-prod--v1-8",
+    "name": "api-backend-prod--v1-8",
+    "type": "Microsoft.App/containerApps/revisions",
+    "properties": {
+      "createdTime": "2024-01-22T10:00:00Z",
+      "lastActiveTime": "2024-01-22T10:00:00Z",
+      "fqdn": "api-backend-prod.internal.proudocean-12345.eastus.azurecontainerapps.io",
+      "template": {
+        "revisionSuffix": "v1-8",
+        "containers": [
+          {
+            "name": "api-server",
+            "image": "myregistry.azurecr.io/api-backend:v1.8",
+            "command": [],
+            "args": [],
+            "resources": {
+              "cpu": 1.5,
+              "memory": "3Gi"
+            },
+            "env": [
+              {
+                "name": "NODE_ENV",
+                "value": "production"
+              },
+              {
+                "name": "PORT",
+                "value": "3000"
+              },
+              {
+                "name": "DATABASE_URL",
+                "value": "postgresql://prod-db.postgres.database.azure.com:5432/api"
+              },
+              {
+                "name": "REDIS_URL",
+                "value": "redis://redis-prod.internal:6379"
+              },
+              {
+                "name": "JWT_SECRET",
+                "value": "***"
+              },
+              {
+                "name": "AZURE_CLIENT_ID",
+                "value": "12345678-1234-1234-1234-123456789012"
+              },
+              {
+                "name": "AZURE_CLIENT_SECRET",
+                "value": "***"
+              },
+              {
+                "name": "LOG_LEVEL",
+                "value": "info"
+              },
+              {
+                "name": "RATE_LIMIT_MAX",
+                "value": "1000"
+              }
+            ],
+            "probes": [
+              {
+                "type": "liveness"
+              },
+              {
+                "type": "readiness"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "volumeName": "config-volume",
+                "mountPath": "/app/config"
+              },
+              {
+                "volumeName": "cache-volume",
+                "mountPath": "/app/cache"
+              }
+            ]
+          },
+          {
+            "name": "sidecar-proxy",
+            "image": "envoyproxy/envoy:v1.28-latest",
+            "command": ["/usr/local/bin/envoy"],
+            "args": ["-c", "/etc/envoy/envoy.yaml"],
+            "resources": {
+              "cpu": 0.5,
+              "memory": "1Gi"
+            },
+            "env": [
+              {
+                "name": "ENVOY_LOG_LEVEL",
+                "value": "info"
+              },
+              {
+                "name": "SERVICE_NAME",
+                "value": "api-backend"
+              }
+            ],
+            "probes": [
+              {
+                "type": "liveness"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "volumeName": "envoy-config",
+                "mountPath": "/etc/envoy"
+              }
+            ]
+          }
+        ],
+        "scale": {
+          "minReplicas": 3,
+          "maxReplicas": 15
+        }
+      },
+      "active": true,
+      "replicas": 5,
+      "trafficWeight": 100,
+      "provisioningState": "Succeeded",
+      "healthState": "Healthy",
+      "runningState": "Running"
+    }
+  },
+  "worker-service-prod-worker-service-prod--v1-2": {
+    "id": "/subscriptions/12345/resourceGroups/rg-production-eastus/providers/Microsoft.App/containerApps/worker-service-prod/revisions/worker-service-prod--v1-2",
+    "name": "worker-service-prod--v1-2",
+    "type": "Microsoft.App/containerApps/revisions",
+    "properties": {
+      "createdTime": "2024-01-18T10:00:00Z",
+      "lastActiveTime": "2024-01-18T10:00:00Z",
+      "fqdn": "",
+      "template": {
+        "revisionSuffix": "v1-2",
+        "containers": [
+          {
+            "name": "background-worker",
+            "image": "myregistry.azurecr.io/worker-service:v1.2",
+            "command": [],
+            "args": [],
+            "resources": {
+              "cpu": 1.5,
+              "memory": "3Gi"
+            },
+            "env": [
+              {
+                "name": "NODE_ENV",
+                "value": "production"
+              },
+              {
+                "name": "QUEUE_URL",
+                "value": "redis://redis-prod.internal:6379"
+              },
+              {
+                "name": "DATABASE_URL",
+                "value": "postgresql://prod-db.postgres.database.azure.com:5432/worker"
+              },
+              {
+                "name": "LOG_LEVEL",
+                "value": "info"
+              },
+              {
+                "name": "WORKER_CONCURRENCY",
+                "value": "5"
+              },
+              {
+                "name": "AZURE_CLIENT_ID",
+                "value": "12345678-1234-1234-1234-123456789012"
+              },
+              {
+                "name": "AZURE_CLIENT_SECRET",
+                "value": "***"
+              }
+            ],
+            "probes": [
+              {
+                "type": "liveness"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "volumeName": "worker-data",
+                "mountPath": "/app/data"
+              }
+            ]
+          }
+        ],
+        "scale": {
+          "minReplicas": 1,
+          "maxReplicas": 5
+        }
+      },
+      "active": true,
+      "replicas": 2,
+      "trafficWeight": 100,
+      "provisioningState": "Succeeded",
+      "healthState": "Healthy",
+      "runningState": "Running"
+    }
+  },
+  "web-frontend-staging-web-frontend-staging--v3-1": {
+    "id": "/subscriptions/12345/resourceGroups/rg-staging-westus/providers/Microsoft.App/containerApps/web-frontend-staging/revisions/web-frontend-staging--v3-1",
+    "name": "web-frontend-staging--v3-1",
+    "type": "Microsoft.App/containerApps/revisions",
+    "properties": {
+      "createdTime": "2024-01-23T10:00:00Z",
+      "lastActiveTime": "2024-01-23T10:00:00Z",
+      "fqdn": "web-frontend-staging.kindpond-67890.westus.azurecontainerapps.io",
+      "template": {
+        "revisionSuffix": "v3-1",
+        "containers": [
+          {
+            "name": "web-app",
+            "image": "myregistry.azurecr.io/web-frontend:v3.1-staging",
+            "command": [],
+            "args": [],
+            "resources": {
+              "cpu": 0.5,
+              "memory": "1Gi"
+            },
+            "env": [
+              {
+                "name": "NODE_ENV",
+                "value": "staging"
+              },
+              {
+                "name": "API_BASE_URL",
+                "value": "https://api-backend-staging.internal.kindpond-67890.westus.azurecontainerapps.io"
+              },
+              {
+                "name": "LOG_LEVEL",
+                "value": "debug"
+              },
+              {
+                "name": "REDIS_URL",
+                "value": "redis://redis-staging.internal:6379"
+              }
+            ],
+            "probes": [
+              {
+                "type": "liveness"
+              },
+              {
+                "type": "readiness"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "volumeName": "config-volume",
+                "mountPath": "/app/config"
+              }
+            ]
+          }
+        ],
+        "scale": {
+          "minReplicas": 1,
+          "maxReplicas": 3
+        }
+      },
+      "active": true,
+      "replicas": 1,
+      "trafficWeight": 100,
+      "provisioningState": "Succeeded",
+      "healthState": "Healthy",
+      "runningState": "Running"
+    }
+  },
+  "web-frontend-dev-web-frontend-dev--v4-2": {
+    "id": "/subscriptions/12345/resourceGroups/rg-development-centralus/providers/Microsoft.App/containerApps/web-frontend-dev/revisions/web-frontend-dev--v4-2",
+    "name": "web-frontend-dev--v4-2",
+    "type": "Microsoft.App/containerApps/revisions",
+    "properties": {
+      "createdTime": "2024-01-24T10:00:00Z",
+      "lastActiveTime": "2024-01-24T10:00:00Z",
+      "fqdn": "web-frontend-dev.calmhill-11111.centralus.azurecontainerapps.io",
+      "template": {
+        "revisionSuffix": "v4-2",
+        "containers": [
+          {
+            "name": "web-app",
+            "image": "myregistry.azurecr.io/web-frontend:v4.2-dev",
+            "command": [],
+            "args": [],
+            "resources": {
+              "cpu": 0.25,
+              "memory": "0.5Gi"
+            },
+            "env": [
+              {
+                "name": "NODE_ENV",
+                "value": "development"
+              },
+              {
+                "name": "API_BASE_URL",
+                "value": "http://localhost:3000"
+              },
+              {
+                "name": "LOG_LEVEL",
+                "value": "debug"
+              },
+              {
+                "name": "HOT_RELOAD",
+                "value": "true"
+              }
+            ],
+            "probes": [
+              {
+                "type": "liveness"
+              }
+            ],
+            "volumeMounts": []
+          }
+        ],
+        "scale": {
+          "minReplicas": 0,
+          "maxReplicas": 2
+        }
+      },
+      "active": true,
+      "replicas": 1,
+      "trafficWeight": 100,
+      "provisioningState": "Succeeded",
+      "healthState": "Healthy",
+      "runningState": "Running"
+    }
+  },
+  "monitoring-dashboard-monitoring-dashboard--v1-5": {
+    "id": "/subscriptions/12345/resourceGroups/rg-shared-services/providers/Microsoft.App/containerApps/monitoring-dashboard/revisions/monitoring-dashboard--v1-5",
+    "name": "monitoring-dashboard--v1-5",
+    "type": "Microsoft.App/containerApps/revisions",
+    "properties": {
+      "createdTime": "2024-01-21T10:00:00Z",
+      "lastActiveTime": "2024-01-21T10:00:00Z",
+      "fqdn": "monitoring-dashboard.nicegrass-22222.eastus2.azurecontainerapps.io",
+      "template": {
+        "revisionSuffix": "v1-5",
+        "containers": [
+          {
+            "name": "grafana",
+            "image": "grafana/grafana:10.2.0",
+            "command": [],
+            "args": [],
+            "resources": {
+              "cpu": 1.0,
+              "memory": "2Gi"
+            },
+            "env": [
+              {
+                "name": "GF_SECURITY_ADMIN_PASSWORD",
+                "value": "***"
+              },
+              {
+                "name": "GF_INSTALL_PLUGINS",
+                "value": "grafana-azure-monitor-datasource"
+              },
+              {
+                "name": "GF_SERVER_ROOT_URL",
+                "value": "https://monitoring-dashboard.nicegrass-22222.eastus2.azurecontainerapps.io"
+              },
+              {
+                "name": "GF_DATABASE_TYPE",
+                "value": "postgres"
+              },
+              {
+                "name": "GF_DATABASE_HOST",
+                "value": "shared-db.postgres.database.azure.com:5432"
+              },
+              {
+                "name": "GF_DATABASE_NAME",
+                "value": "grafana"
+              },
+              {
+                "name": "GF_DATABASE_USER",
+                "value": "grafana@shared-db"
+              },
+              {
+                "name": "GF_DATABASE_PASSWORD",
+                "value": "***"
+              }
+            ],
+            "probes": [
+              {
+                "type": "liveness"
+              },
+              {
+                "type": "readiness"
+              }
+            ],
+            "volumeMounts": [
+              {
+                "volumeName": "grafana-storage",
+                "mountPath": "/var/lib/grafana"
+              }
+            ]
+          }
+        ],
+        "scale": {
+          "minReplicas": 1,
+          "maxReplicas": 2
+        }
+      },
+      "active": true,
+      "replicas": 1,
+      "trafficWeight": 100,
+      "provisioningState": "Succeeded",
+      "healthState": "Healthy",
+      "runningState": "Running"
+    }
+  }
+}

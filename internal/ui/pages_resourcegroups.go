@@ -194,14 +194,14 @@ func (m model) handleResourceGroupsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.loading = true
 		m.apps = nil
 		m.appsTable = m.createAppsTable()
-		return m, LoadAppsCmd(m.rg), true
+		return m, LoadAppsCmd(m.dataProvider, m.rg), true
 
 	case "r":
 		// Refresh resource groups list - clear data and show loading state
 		m.loading = true
 		m.resourceGroups = nil
 		m.resourceGroupsTable = m.createResourceGroupsTable()
-		return m, LoadResourceGroupsCmd(), true
+		return m, LoadResourceGroupsCmd(m.dataProvider), true
 	}
 
 	return m, nil, false

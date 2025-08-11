@@ -235,7 +235,7 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.loading = true
 		m.apps = nil
 		m.appsTable = m.createAppsTable()
-		return m, LoadAppsCmd(m.rg), true
+		return m, LoadAppsCmd(m.dataProvider, m.rg), true
 
 	case "l":
 		if len(m.apps) == 0 {
@@ -268,7 +268,7 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ShowAppLogs(selectedApp), true
+		return m, m.commandProvider.ShowAppLogs(selectedApp), true
 
 	case "s", "e":
 		if len(m.apps) == 0 {
@@ -301,7 +301,7 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 			return m, nil, true
 		}
 
-		return m, m.azureCommands.ExecIntoApp(selectedApp), true
+		return m, m.commandProvider.ExecIntoApp(selectedApp), true
 
 	case "esc":
 		// Go back to resource groups mode
@@ -310,7 +310,7 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.rg = "" // Clear the selected resource group
 		m.resourceGroups = nil
 		m.resourceGroupsTable = m.createResourceGroupsTable()
-		return m, LoadResourceGroupsCmd(), true
+		return m, LoadResourceGroupsCmd(m.dataProvider), true
 	}
 
 	return m, nil, false

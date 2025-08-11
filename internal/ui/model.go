@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/IAL32/az-tui/internal/mock"
 	models "github.com/IAL32/az-tui/internal/models"
+	"github.com/IAL32/az-tui/internal/providers"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -122,15 +124,30 @@ type model struct {
 	statusLine string
 	confirm    ConfirmDialog
 
-	// Command execution
-	azureCommands *AzureCommands
+	// Data and command providers
+	dataProvider    providers.DataProvider
+	commandProvider providers.CommandProvider
 }
 
 // Messages
 type noop struct{}
 
 // Initialization
-func InitialModel() model {
+func InitialModel(useMockMode bool) model {
+	// Initialize the appropriate data provider
+	var dataProvider providers.DataProvider
+	if useMockMode {
+		mockProvider, err := mock.NewProvider()
+		if err != nil {
+			// Fallback to Azure provider if mock fails to load
+			dataProvider = providers.NewAzureProvider()
+		} else {
+			dataProvider = mockProvider
+		}
+	} else {
+		dataProvider = providers.NewAzureProvider()
+	}
+
 	m := model{
 		// Pure data
 		apps:           nil,
@@ -161,8 +178,9 @@ func InitialModel() model {
 		statusLine: "",
 		confirm:    ConfirmDialog{},
 
-		// Command execution
-		azureCommands: NewAzureCommands(),
+		// Data and command providers
+		dataProvider:    dataProvider,
+		commandProvider: createCommandProvider(useMockMode),
 	}
 
 	// Initialize empty tables
@@ -247,7 +265,15 @@ func InitialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(LoadResourceGroupsCmd(), m.spinner.Tick)
+	return tea.Batch(LoadResourceGroupsCmd(m.dataProvider), m.spinner.Tick)
+}
+
+// createCommandProvider creates the appropriate command provider based on mock mode
+func createCommandProvider(useMockMode bool) providers.CommandProvider {
+	if useMockMode {
+		return providers.NewMockCommandProvider()
+	}
+	return providers.NewAzureCommandProvider()
 }
 
 // Helper functions

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "rg-production-eastus",
+    "location": "East US",
+    "provisioningState": "Succeeded",
+    "tags": {
+      "environment": "production",
+      "team": "platform"
+    }
+  },
+  {
+    "name": "rg-staging-westus",
+    "location": "West US",
+    "provisioningState": "Succeeded",
+    "tags": {
+      "environment": "staging",
+      "team": "development"
+    }
+  },
+  {
+    "name": "rg-development-centralus",
+    "location": "Central US",
+    "provisioningState": "Succeeded",
+    "tags": {
+      "environment": "development",
+      "team": "development"
+    }
+  },
+  {
+    "name": "rg-shared-services",
+    "location": "East US 2",
+    "provisioningState": "Succeeded",
+    "tags": {
+      "environment": "shared",
+      "team": "platform"
+    }
+  }
+]
