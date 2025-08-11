@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // Table column keys for Containers mode
@@ -63,6 +62,15 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit, true
+	case "r":
+		// Refresh containers list - clear data and show loading state
+		a := m.getCurrentApp()
+		if a.Name == "" || m.currentRevName == "" {
+			return m, nil, true
+		}
+		m.ctrs = nil
+		m.containersTable = m.createContainersTable()
+		return m, LoadContainersCmd(a, m.currentRevName), true
 	case "s":
 		if len(m.ctrs) == 0 {
 			return m, nil, true
@@ -149,24 +157,19 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewContainers() string {
-	if m.err != nil && !m.loading {
-		return StyleError.Render("Error: ") + m.err.Error() + "  [b/esc] back"
+	title := fmt.Sprintf("Containers — %s@%s", m.getCurrentAppName(), m.currentRevName)
+
+	if len(m.ctrs) == 0 && m.err == nil {
+		// Show loading state using generalized layout
+		return m.createLoadingLayout(title, "Loading containers...")
 	}
 
-	// Show table view
+	if m.err != nil && len(m.ctrs) == 0 {
+		// Show error state using generalized layout
+		return m.createErrorLayout(title, m.err.Error(), "[esc] back  [q] quit")
+	}
+
+	// Show table view using generalized layout
 	tableView := m.containersTable.View()
-	help := styleAccent.Render("[s] exec  [l] logs  [shift+←/→] scroll  [b/esc] back  [q] quit")
-
-	body := lipgloss.JoinVertical(
-		lipgloss.Left,
-		styleTitle.Render(fmt.Sprintf("Containers — %s@%s", m.getCurrentAppName(), m.currentRevName)),
-		tableView,
-		help,
-		m.statusLine,
-	)
-
-	if m.confirm.Visible {
-		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
-	}
-	return body
+	return m.createTableLayout(title, tableView)
 }

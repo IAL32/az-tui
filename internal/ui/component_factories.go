@@ -167,18 +167,34 @@ func (m model) createAppsTable() table.Model {
 
 // createRevisionsTable creates a table component for revisions
 func (m model) createRevisionsTable() table.Model {
+	// Calculate dynamic width for Revision column based on content
+	revisionWidth := len("Revision")
+
+	// Find maximum width needed for Revision column
+	for _, rev := range m.revs {
+		if len(rev.Name) > revisionWidth {
+			revisionWidth = len(rev.Name)
+		}
+	}
+
+	// Add padding and set minimum width
+	revisionWidth += 2
+	if revisionWidth < 15 {
+		revisionWidth = 15
+	}
+
 	columns := []table.Column{
-		table.NewColumn(columnKeyRevName, "Revision", 25),       // Fixed width for frozen column
-		table.NewColumn(columnKeyRevActive, "Active", 8),        // Fixed width
-		table.NewColumn(columnKeyRevTraffic, "Traffic", 10),     // Fixed width
-		table.NewColumn(columnKeyRevReplicas, "Replicas", 10),   // Fixed width
-		table.NewColumn(columnKeyRevScaling, "Scaling", 12),     // Fixed width
-		table.NewColumn(columnKeyRevResources, "Resources", 15), // Fixed width
-		table.NewColumn(columnKeyRevHealth, "Health", 12),       // Fixed width
-		table.NewColumn(columnKeyRevRunning, "Running", 15),     // Fixed width
-		table.NewColumn(columnKeyRevCreated, "Created", 20),     // Fixed width
-		table.NewColumn(columnKeyRevStatus, "Status", 15),       // Fixed width
-		table.NewColumn(columnKeyRevFQDN, "FQDN", 60),           // Fixed width (longest content)
+		table.NewColumn(columnKeyRevName, "Revision", revisionWidth), // Dynamic width based on content
+		table.NewColumn(columnKeyRevActive, "Active", 8),             // Fixed width
+		table.NewColumn(columnKeyRevTraffic, "Traffic", 10),          // Fixed width
+		table.NewColumn(columnKeyRevReplicas, "Replicas", 10),        // Fixed width
+		table.NewColumn(columnKeyRevScaling, "Scaling", 12),          // Fixed width
+		table.NewColumn(columnKeyRevResources, "Resources", 15),      // Fixed width
+		table.NewColumn(columnKeyRevHealth, "Health", 12),            // Fixed width
+		table.NewColumn(columnKeyRevRunning, "Running", 15),          // Fixed width
+		table.NewColumn(columnKeyRevCreated, "Created", 20),          // Fixed width
+		table.NewColumn(columnKeyRevStatus, "Status", 15),            // Fixed width
+		table.NewColumn(columnKeyRevFQDN, "FQDN", 60),                // Fixed width (longest content)
 	}
 
 	var rows []table.Row
@@ -299,16 +315,32 @@ func (m model) createRevisionsTable() table.Model {
 
 // createContainersTable creates a table component for containers
 func (m model) createContainersTable() table.Model {
+	// Calculate dynamic width for Container column based on content
+	containerWidth := len("Container")
+
+	// Find maximum width needed for Container column
+	for _, ctr := range m.ctrs {
+		if len(ctr.Name) > containerWidth {
+			containerWidth = len(ctr.Name)
+		}
+	}
+
+	// Add padding and set minimum width
+	containerWidth += 2
+	if containerWidth < 12 {
+		containerWidth = 12
+	}
+
 	columns := []table.Column{
-		table.NewColumn(columnKeyCtrName, "Container", 18),      // Fixed width for frozen column
-		table.NewColumn(columnKeyCtrImage, "Image", 50),         // Fixed width (longest content)
-		table.NewColumn(columnKeyCtrCommand, "Command", 25),     // Fixed width
-		table.NewColumn(columnKeyCtrArgs, "Args", 25),           // Fixed width
-		table.NewColumn(columnKeyCtrResources, "Resources", 15), // Fixed width
-		table.NewColumn(columnKeyCtrEnvCount, "Env", 8),         // Fixed width
-		table.NewColumn(columnKeyCtrProbes, "Probes", 12),       // Fixed width
-		table.NewColumn(columnKeyCtrVolumes, "Volumes", 10),     // Fixed width
-		table.NewColumn(columnKeyCtrStatus, "Status", 10),       // Fixed width
+		table.NewColumn(columnKeyCtrName, "Container", containerWidth), // Dynamic width based on content
+		table.NewColumn(columnKeyCtrStatus, "Status", 10),              // Fixed width - moved to second position
+		table.NewColumn(columnKeyCtrImage, "Image", 50),                // Fixed width (longest content)
+		table.NewColumn(columnKeyCtrCommand, "Command", 25),            // Fixed width
+		table.NewColumn(columnKeyCtrArgs, "Args", 25),                  // Fixed width
+		table.NewColumn(columnKeyCtrResources, "Resources", 15),        // Fixed width
+		table.NewColumn(columnKeyCtrEnvCount, "Env", 8),                // Fixed width
+		table.NewColumn(columnKeyCtrProbes, "Probes", 12),              // Fixed width
+		table.NewColumn(columnKeyCtrVolumes, "Volumes", 10),            // Fixed width
 	}
 
 	var rows []table.Row
@@ -428,4 +460,202 @@ func (m model) confirmBox() string {
 		Render(m.confirm.Text + "\n\n[y] Yes  [n] No")
 
 	return box
+}
+
+// Status bar component factory
+func (m model) createStatusBar() string {
+	w := lipgloss.Width
+
+	// Mode indicator
+	var modeIndicator string
+	switch m.mode {
+	case modeApps:
+		modeIndicator = modeAppsStyle.Render("APPS")
+	case modeRevs:
+		modeIndicator = modeRevisionsStyle.Render("REVISIONS")
+	case modeContainers:
+		modeIndicator = modeContainersStyle.Render("CONTAINERS")
+	}
+
+	// Status indicator
+	var statusIndicator string
+	if m.loading {
+		spinner := m.createSpinner()
+		statusIndicator = statusLoadingStyle.Render("Loading " + spinner.View())
+	} else if m.err != nil {
+		statusIndicator = statusErrorStyle.Render("Error")
+	} else {
+		statusIndicator = statusReadyStyle.Render("Ready")
+	}
+
+	// Count indicator
+	var countIndicator string
+	switch m.mode {
+	case modeApps:
+		if len(m.apps) == 1 {
+			countIndicator = countStyle.Render("1 App")
+		} else {
+			countIndicator = countStyle.Render(fmt.Sprintf("%d Apps", len(m.apps)))
+		}
+	case modeRevs:
+		if len(m.revs) == 1 {
+			countIndicator = countStyle.Render("1 Revision")
+		} else {
+			countIndicator = countStyle.Render(fmt.Sprintf("%d Revisions", len(m.revs)))
+		}
+	case modeContainers:
+		if len(m.ctrs) == 1 {
+			countIndicator = countStyle.Render("1 Container")
+		} else {
+			countIndicator = countStyle.Render(fmt.Sprintf("%d Containers", len(m.ctrs)))
+		}
+	}
+
+	// Context indicator (for deeper navigation levels)
+	var contextIndicator string
+	switch m.mode {
+	case modeRevs:
+		if appName := m.getCurrentAppName(); appName != "" {
+			contextIndicator = contextStyle.Render("App: " + appName)
+		}
+	case modeContainers:
+		if appName := m.getCurrentAppName(); appName != "" && m.currentRevName != "" {
+			contextIndicator = contextStyle.Render(fmt.Sprintf("App: %s@%s", appName, m.currentRevName))
+		}
+	}
+
+	// Resource group indicator
+	var rgIndicator string
+	if m.rg != "" {
+		rgIndicator = rgStyle.Render("RG: " + m.rg)
+	}
+
+	// Calculate widths for fixed elements
+	fixedWidth := w(modeIndicator) + w(statusIndicator) + w(countIndicator) + w(rgIndicator)
+	if contextIndicator != "" {
+		fixedWidth += w(contextIndicator)
+	}
+
+	// Status message (expandable middle section)
+	statusMessage := m.statusLine
+	if statusMessage == "" {
+		if m.err != nil {
+			statusMessage = m.err.Error()
+		} else if m.loading {
+			switch m.mode {
+			case modeApps:
+				statusMessage = "Loading container apps..."
+			case modeRevs:
+				statusMessage = "Loading revisions..."
+			case modeContainers:
+				statusMessage = "Loading containers..."
+			}
+		} else {
+			// When ready, show empty message since status indicator already shows "Ready"
+			statusMessage = ""
+		}
+	}
+
+	// Create expandable status text
+	statusVal := statusText.
+		Width(max(0, m.termW-fixedWidth-4)). // Leave some margin
+		Render(statusMessage)
+
+	// Build the status bar
+	var elements []string
+	elements = append(elements, modeIndicator)
+	elements = append(elements, statusIndicator)
+	if contextIndicator != "" {
+		elements = append(elements, contextIndicator)
+	}
+	elements = append(elements, statusVal)
+	elements = append(elements, countIndicator)
+	if rgIndicator != "" {
+		elements = append(elements, rgIndicator)
+	}
+
+	bar := lipgloss.JoinHorizontal(lipgloss.Top, elements...)
+	return statusBarStyle.Width(m.termW).Render(bar)
+}
+
+// Helper function for max
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// Help bar component factory
+func (m model) createHelpBar() string {
+	var helpText string
+	switch m.mode {
+	case modeApps:
+		helpText = "[enter] revisions  [l] logs  [s] exec  [r] refresh  [shift+←/→] scroll  [q] quit"
+	case modeRevs:
+		helpText = "[enter] containers  [s] exec  [l] logs  [r] refresh  [R] restart revision  [shift+←/→] scroll  [esc] back  [q] quit"
+	case modeContainers:
+		helpText = "[s] exec  [l] logs  [r] refresh  [shift+←/→] scroll  [esc] back  [q] quit"
+	}
+	return styleAccent.Render(helpText)
+}
+
+// General layout manager for consistent UI structure
+func (m model) createLayout(title string, content string) string {
+	// Create the main content area (title + content only)
+	mainContent := lipgloss.JoinVertical(
+		lipgloss.Left,
+		styleTitle.Render(title),
+		content,
+	)
+
+	// Create the bottom bars
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+
+	// Calculate available height for main content (total height - help bar - status bar)
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+	mainContentHeight := m.termH - helpBarHeight - statusBarHeight
+
+	// Position main content at top, help bar and status bar at bottom
+	body := lipgloss.JoinVertical(
+		lipgloss.Left,
+		lipgloss.NewStyle().Height(mainContentHeight).Render(mainContent),
+		helpBar,
+		statusBar,
+	)
+
+	if m.confirm.Visible {
+		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
+	}
+	return body
+}
+
+// Loading state layout
+func (m model) createLoadingLayout(title string, message string) string {
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		"",
+		styleAccent.Render(message),
+		"",
+	)
+	return m.createLayout(title, content)
+}
+
+// Error state layout
+func (m model) createErrorLayout(title string, errorMsg string, helpMsg string) string {
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		"",
+		StyleError.Render("Error: ")+errorMsg,
+		styleAccent.Render(helpMsg),
+		"",
+	)
+	return m.createLayout(title, content)
+}
+
+// Table layout
+func (m model) createTableLayout(title string, tableView string) string {
+	return m.createLayout(title, tableView)
 }

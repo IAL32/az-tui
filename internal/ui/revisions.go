@@ -6,7 +6,6 @@ import (
 	models "az-tui/internal/models"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // Table column keys for Revisions mode
@@ -135,6 +134,16 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		return m, LoadContainersCmd(a, selectedRev.Name), true
 
 	case "r":
+		// Refresh revisions list - clear data and show loading state
+		a := m.getCurrentApp()
+		if a.Name == "" {
+			return m, nil, true
+		}
+		m.revs = nil
+		m.revisionsTable = m.createRevisionsTable()
+		return m, LoadRevsCmd(a), true
+
+	case "R":
 		if len(m.revs) == 0 {
 			return m, nil, true
 		}
@@ -274,24 +283,19 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewRevs() string {
-	if m.err != nil && !m.loading {
-		return StyleError.Render("Error: ") + m.err.Error() + "  [b/esc] back"
+	title := fmt.Sprintf("Revisions — %s", m.getCurrentAppName())
+
+	if len(m.revs) == 0 && m.err == nil {
+		// Show loading state using generalized layout
+		return m.createLoadingLayout(title, "Loading revisions...")
 	}
 
-	// Show table view
+	if m.err != nil && len(m.revs) == 0 {
+		// Show error state using generalized layout
+		return m.createErrorLayout(title, m.err.Error(), "[esc] back  [q] quit")
+	}
+
+	// Show table view using generalized layout
 	tableView := m.revisionsTable.View()
-	help := styleAccent.Render("[enter] containers  [s] exec  [l] logs  [r] restart revision  [shift+←/→] scroll  [b/esc] back  [q] quit")
-
-	body := lipgloss.JoinVertical(
-		lipgloss.Left,
-		styleTitle.Render(fmt.Sprintf("Revisions — %s", m.getCurrentAppName())),
-		tableView,
-		help,
-		m.statusLine,
-	)
-
-	if m.confirm.Visible {
-		return lipgloss.Place(m.termW, m.termH, lipgloss.Center, lipgloss.Center, m.confirmBox())
-	}
-	return body
+	return m.createTableLayout(title, tableView)
 }
