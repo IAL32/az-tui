@@ -1,6 +1,6 @@
-# AzulTUI
+# Az-TUI
 
-AzulTUI is a **terminal-based user interface (TUI)** for managing Azure Container Apps, inspired by tools like K9s. It allows you to browse your Container Apps, inspect details and revisions, and access container logs or shells, all from within a single terminal UI.
+Az-TUI is a **terminal-based user interface (TUI)** for managing Azure Container Apps, inspired by tools like K9s. It allows you to browse your Container Apps, inspect details and revisions, and access container logs or shells, all from within a single terminal UI.
 
 ## Features
 
@@ -18,28 +18,44 @@ AzulTUI is a **terminal-based user interface (TUI)** for managing Azure Containe
 - `q` / `Ctrl+C` – Quit
 - `/` – Filter list
 - `Esc` – Go back (in nested views)
-- `Enter` – Drill down (apps → revisions → containers)
-- `Tab` – Switch right pane (in apps mode)
+- `Enter` – Select/drill down
+- `?` – Toggle help
+- `Shift+←` / `Shift+→` – Scroll table left/right
+
+### Resource Groups Mode
+
+- `r` – Refresh resource groups
+- `Enter` – Select resource group and view apps
 
 ### Apps Mode
 
 - `r` – Refresh apps
-- `R` – Reload revisions
-- `l` – Logs for app's latest revision
-- `s` – Exec into latest revision
+- `R` – Restart revision
+- `l` – Logs for app
+- `s` – Exec into app
+- `v` – View environment variables
+- `Enter` – View revisions for app
 
 ### Revisions Mode
 
-- `Enter` – View containers in revision
+- `r` – Refresh revisions
+- `R` – Restart revision
 - `l` – Logs for revision
-- `e` – Exec into revision
-- `r` – Restart revision
+- `s` – Exec into revision
+- `Enter` – View containers in revision
 
 ### Containers Mode
 
+- `r` – Refresh containers
 - `l` – Logs for container
-- `e` – Exec into container
-- `r` – Restart revision containing container
+- `s` – Exec into container
+- `v` – View environment variables
+- `Enter` – View environment variables for container
+
+### Environment Variables Mode
+
+- `r` – Refresh environment variables
+- `Esc` – Go back to previous mode
 
 ## Installation
 
@@ -60,8 +76,7 @@ go build -o az-tui cmd/az-tui/main.go
 Or install directly:
 
 ```bash
-go install github.com/IAL32/az-tui/cmd/az-tui@v0.1.1
-az-tui --version
+go install github.com/IAL32/az-tui/cmd/az-tui@latest
 ```
 
 ## Usage
@@ -82,12 +97,13 @@ Navigate with arrow keys or `j`/`k`, drill down with `Enter`, and use the key bi
 
 ## Architecture
 
-AzulTUI uses the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework:
+Az-TUI uses the [Bubble Tea](https://github.com/charmbracelet/bubbletea) framework:
 
-- **Modes:** `apps` → `revisions` → `containers`
-- **Azure CLI integration:** Fetches data using `az containerapp` commands
-- **UI Components:** Bubbles list, table, and viewport for flexible layouts
+- **Modes:** `resource groups` → `apps` → `revisions` → `containers` → `environment variables`
+- **Azure CLI integration:** Fetches data using `az containerapp` and `az group` commands
+- **UI Components:** Bubble Table for data display with filtering and navigation
 - **Asynchronous updates:** Commands run in background and update the model via messages
+- **Help system:** Built-in help with `?` key showing context-sensitive keybindings
 
 ## Roadmap
 
