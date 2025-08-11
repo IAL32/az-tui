@@ -136,7 +136,8 @@ func (m model) createRevisionsTable() table.Model {
 		WithHorizontalFreezeColumnCount(1).
 		Filtered(true).
 		WithFilterInput(m.revisionsFilterInput).
-		Focused(true)
+		Focused(true).
+		WithFilterFunc(NewFuzzyFilter(columns))
 
 	// Only sort if we have actual data
 	if len(m.revs) > 0 {

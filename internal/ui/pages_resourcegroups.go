@@ -72,7 +72,8 @@ func (m model) createResourceGroupsTable() table.Model {
 		Filtered(true).
 		WithFilterInput(m.resourceGroupsFilterInput).
 		Focused(true).
-		SortByAsc(columnKeyRGName)
+		SortByAsc(columnKeyRGName).
+		WithFilterFunc(NewFuzzyFilter(columns))
 
 	// Calculate height dynamically based on actual help and status bar heights
 	helpBar := m.createHelpBar()

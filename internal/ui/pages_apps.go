@@ -113,7 +113,8 @@ func (m model) createAppsTable() table.Model {
 		WithHorizontalFreezeColumnCount(1).
 		Filtered(true).
 		WithFilterInput(m.appsFilterInput).
-		Focused(true)
+		Focused(true).
+		WithFilterFunc(NewFuzzyFilter(columns))
 
 	// Calculate height dynamically based on actual help and status bar heights
 	helpBar := m.createHelpBar()

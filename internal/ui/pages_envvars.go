@@ -68,7 +68,8 @@ func (m model) createEnvVarsTable() table.Model {
 		WithHorizontalFreezeColumnCount(1).
 		Filtered(true).
 		WithFilterInput(m.envVarsFilterInput).
-		Focused(true)
+		Focused(true).
+		WithFilterFunc(NewFuzzyFilter(columns))
 
 	// Calculate height dynamically based on actual help and status bar heights
 	helpBar := m.createHelpBar()
