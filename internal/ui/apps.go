@@ -70,6 +70,9 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit, true
+	case "?":
+		m.help.ShowAll = !m.help.ShowAll
+		return m, nil, true
 	case "/":
 		m.appsFilterInput.Focus()
 		return m, nil, true

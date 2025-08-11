@@ -59,6 +59,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		w, h := msg.Width, msg.Height
 		m.termW, m.termH = w, h
+		m.help.Width = w
 		return m, nil
 
 	case loadedAppsMsg:

@@ -606,18 +606,9 @@ func max(a, b int) int {
 	return b
 }
 
-// Help bar component factory
+// Help bar component factory - now uses bubble help
 func (m model) createHelpBar() string {
-	var helpText string
-	switch m.mode {
-	case modeApps:
-		helpText = "[enter] revisions  [l] logs  [s] exec  [r] refresh  [/] filter  [shift+←/→] scroll  [q] quit"
-	case modeRevs:
-		helpText = "[enter] containers  [s] exec  [l] logs  [r] refresh  [R] restart revision  [/] filter  [shift+←/→] scroll  [esc] back  [q] quit"
-	case modeContainers:
-		helpText = "[s] exec  [l] logs  [r] refresh  [/] filter  [shift+←/→] scroll  [esc] back  [q] quit"
-	}
-	return styleAccent.Render(helpText)
+	return m.help.View(m.keys)
 }
 
 // General layout manager for consistent UI structure
