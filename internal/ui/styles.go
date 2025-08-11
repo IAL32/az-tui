@@ -50,4 +50,9 @@ var (
 
 	// Status text (expandable middle section)
 	statusText = lipgloss.NewStyle().Inherit(statusBarStyle)
+
+	// Table styles
+	tableBaseStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#a7a")).
+			BorderForeground(lipgloss.Color("#a38"))
 )

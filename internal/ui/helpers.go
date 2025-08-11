@@ -5,6 +5,7 @@ import (
 
 	models "github.com/IAL32/az-tui/internal/models"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
 )
@@ -144,4 +145,39 @@ func getStatusColor(status string) string {
 	default:
 		return "#888" // Default gray
 	}
+}
+
+// createUnifiedTable creates a table with unified styling and common configuration
+func (m model) createUnifiedTable(columns []table.Column, rows []table.Row, filterInput interface{}) table.Model {
+	t := table.New(columns).
+		WithRows(rows).
+		BorderRounded().
+		WithBaseStyle(tableBaseStyle).
+		WithMaxTotalWidth(m.termW).
+		WithHorizontalFreezeColumnCount(1).
+		Filtered(true).
+		Focused(true).
+		WithFilterFunc(NewFuzzyFilter(columns))
+
+	// Set the filter input with proper type assertion
+	if filterInput != nil {
+		if filter, ok := filterInput.(textinput.Model); ok {
+			t = t.WithFilterInput(filter)
+		}
+	}
+
+	// Calculate height dynamically based on actual help and status bar heights
+	helpBar := m.createHelpBar()
+	statusBar := m.createStatusBar()
+	helpBarHeight := lipgloss.Height(helpBar)
+	statusBarHeight := lipgloss.Height(statusBar)
+
+	// Available height = total height - help bar - status bar - table overhead
+	// Conservative calculation to ensure table header stays visible
+	availableHeight := m.termH - helpBarHeight - statusBarHeight - 6
+	if availableHeight > 0 {
+		t = t.WithPageSize(availableHeight)
+	}
+
+	return t
 }

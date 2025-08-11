@@ -2,7 +2,6 @@ package ui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
 )
 
@@ -58,34 +57,7 @@ func (m model) createEnvVarsTable() table.Model {
 		}
 	}
 
-	t := table.New(columns).
-		WithRows(rows).
-		BorderRounded().
-		WithBaseStyle(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#a7a")).
-			BorderForeground(lipgloss.Color("#a38"))).
-		WithMaxTotalWidth(m.termW).
-		WithHorizontalFreezeColumnCount(1).
-		Filtered(true).
-		WithFilterInput(m.envVarsFilterInput).
-		Focused(true).
-		WithFilterFunc(NewFuzzyFilter(columns))
-
-	// Calculate height dynamically based on actual help and status bar heights
-	helpBar := m.createHelpBar()
-	statusBar := m.createStatusBar()
-	helpBarHeight := lipgloss.Height(helpBar)
-	statusBarHeight := lipgloss.Height(statusBar)
-
-	// Available height = total height - help bar - status bar - table overhead (6 lines)
-	// Conservative calculation to ensure table header stays visible
-	// Accounts for: borders, header, filter area, and extra margin
-	availableHeight := m.termH - helpBarHeight - statusBarHeight - 6
-	if availableHeight > 0 {
-		t = t.WithPageSize(availableHeight)
-	}
-
-	return t
+	return m.createUnifiedTable(columns, rows, m.envVarsFilterInput)
 }
 
 // getEnvVarsHelpKeys returns the key bindings for environment variables mode

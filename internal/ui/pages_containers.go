@@ -100,32 +100,7 @@ func (m model) createContainersTable() table.Model {
 		}
 	}
 
-	t := table.New(columns).
-		WithRows(rows).
-		BorderRounded().
-		WithBaseStyle(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#a7a")).
-			BorderForeground(lipgloss.Color("#a38"))).
-		WithMaxTotalWidth(m.termW).
-		WithHorizontalFreezeColumnCount(1).
-		Filtered(true).
-		WithFilterInput(m.containersFilterInput).
-		Focused(true).
-		WithFilterFunc(NewFuzzyFilter(columns))
-
-	// Calculate height dynamically based on actual help and status bar heights
-	helpBar := m.createHelpBar()
-	statusBar := m.createStatusBar()
-	helpBarHeight := lipgloss.Height(helpBar)
-	statusBarHeight := lipgloss.Height(statusBar)
-
-	// Available height = total height - help bar - status bar
-	availableHeight := m.termH - helpBarHeight - statusBarHeight
-	if availableHeight > 0 {
-		t = t.WithPageSize(availableHeight)
-	}
-
-	return t
+	return m.createUnifiedTable(columns, rows, m.containersFilterInput)
 }
 
 // getContainersHelpKeys returns the key bindings for containers mode
