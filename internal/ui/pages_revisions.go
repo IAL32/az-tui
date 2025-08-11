@@ -100,10 +100,10 @@ func (m model) createRevisionsTable() table.Model {
 				columnKeyRevReplicas:  replicas,
 				columnKeyRevScaling:   scaling,
 				columnKeyRevResources: resources,
-				columnKeyRevHealth:    health,
-				columnKeyRevRunning:   running,
+				columnKeyRevHealth:    table.NewStyledCell(health, lipgloss.NewStyle().Foreground(lipgloss.Color(getStatusColor(health)))),
+				columnKeyRevRunning:   table.NewStyledCell(running, lipgloss.NewStyle().Foreground(lipgloss.Color(getStatusColor(running)))),
 				columnKeyRevCreated:   created,
-				columnKeyRevStatus:    status,
+				columnKeyRevStatus:    table.NewStyledCell(status, lipgloss.NewStyle().Foreground(lipgloss.Color(getStatusColor(status)))),
 				columnKeyRevFQDN:      fqdn,
 			})
 		}

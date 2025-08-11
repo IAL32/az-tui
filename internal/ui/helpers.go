@@ -2,6 +2,7 @@ package ui
 
 import (
 	models "az-tui/internal/models"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
@@ -126,4 +127,20 @@ func (m model) confirmBox() string {
 		Render(m.confirm.Text + "\n\n[y] Yes  [n] No")
 
 	return box
+}
+
+// getStatusColor returns the appropriate color for a status value
+func getStatusColor(status string) string {
+	switch strings.ToLower(status) {
+	case "running", "succeeded", "healthy", "ready", "active":
+		return "#8c8" // Green
+	case "failed", "error", "unhealthy", "critical":
+		return "#c88" // Red
+	case "pending", "provisioning", "starting", "updating":
+		return "#cc8" // Yellow
+	case "stopped", "inactive", "unknown", "-":
+		return "#888" // Gray
+	default:
+		return "#888" // Default gray
+	}
 }

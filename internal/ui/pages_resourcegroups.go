@@ -14,10 +14,10 @@ import (
 func (m model) createResourceGroupsTable() table.Model {
 	// Create dynamic column builder
 	builder := NewDynamicColumnBuilder().
-		AddColumn(columnKeyRGName, "Name", 20, true).         // Dynamic width, min 20
-		AddColumn(columnKeyRGLocation, "Location", 15, true). // Fixed width
-		AddColumn(columnKeyRGState, "State", 12, true).       // Fixed width
-		AddColumn(columnKeyRGTags, "Tags", 30, false)         // Fixed width
+		AddColumn(columnKeyRGName, "Name", 25, true).         // Dynamic width, min 25
+		AddColumn(columnKeyRGLocation, "Location", 20, true). // Fixed width
+		AddColumn(columnKeyRGState, "State", 15, true).       // Fixed width
+		AddColumn(columnKeyRGTags, "Tags", 80, false)         // Fixed width - much larger for tags
 
 	// Update dynamic column widths based on actual content
 	for _, rg := range m.resourceGroups {
@@ -44,16 +44,16 @@ func (m model) createResourceGroupsTable() table.Model {
 					tagPairs = append(tagPairs, fmt.Sprintf("%s=%s", k, v))
 				}
 				tags = strings.Join(tagPairs, ", ")
-				// Truncate if too long
-				if len(tags) > 50 {
-					tags = tags[:47] + "..."
+				// Truncate if too long for the wider column
+				if len(tags) > 120 {
+					tags = tags[:117] + "..."
 				}
 			}
 
 			rows[i] = table.NewRow(table.RowData{
 				columnKeyRGName:     rg.Name,
 				columnKeyRGLocation: rg.Location,
-				columnKeyRGState:    state,
+				columnKeyRGState:    table.NewStyledCell(state, lipgloss.NewStyle().Foreground(lipgloss.Color(getStatusColor(state)))),
 				columnKeyRGTags:     tags,
 			})
 		}

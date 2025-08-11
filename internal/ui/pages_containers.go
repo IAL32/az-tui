@@ -80,7 +80,7 @@ func (m model) createContainersTable() table.Model {
 				columnKeyCtrEnvCount:  envCount,
 				columnKeyCtrProbes:    probes,
 				columnKeyCtrVolumes:   volumes,
-				columnKeyCtrStatus:    "Running", // Default status
+				columnKeyCtrStatus:    table.NewStyledCell("Running", lipgloss.NewStyle().Foreground(lipgloss.Color(getStatusColor("Running")))),
 			})
 		}
 	} else {

@@ -90,7 +90,7 @@ func (m model) createAppsTable() table.Model {
 			rows[i] = table.NewRow(table.RowData{
 				columnKeyAppName:      app.Name,
 				columnKeyAppLocation:  app.Location,
-				columnKeyAppStatus:    status,
+				columnKeyAppStatus:    table.NewStyledCell(status, lipgloss.NewStyle().Foreground(lipgloss.Color(getStatusColor(status)))),
 				columnKeyAppReplicas:  replicas,
 				columnKeyAppResources: resources,
 				columnKeyAppIngress:   ingress,
@@ -307,6 +307,7 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Go back to resource groups mode
 		m.mode = modeResourceGroups
 		m.loading = true
+		m.rg = "" // Clear the selected resource group
 		m.resourceGroups = nil
 		m.resourceGroupsTable = m.createResourceGroupsTable()
 		return m, LoadResourceGroupsCmd(), true

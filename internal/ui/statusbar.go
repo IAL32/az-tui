@@ -21,6 +21,8 @@ func (m model) createStatusBar() string {
 		modeIndicator = modeContainersStyle.Render("CONTAINERS")
 	case modeEnvVars:
 		modeIndicator = modeContainersStyle.Render("ENV VARS")
+	case modeResourceGroups:
+		modeIndicator = modeAppsStyle.Render("RESOURCE GROUPS")
 	}
 
 	// Status indicator
@@ -88,6 +90,12 @@ func (m model) createStatusBar() string {
 		} else {
 			countIndicator = countStyle.Render(fmt.Sprintf("%d Env Vars", envCount))
 		}
+	case modeResourceGroups:
+		if len(m.resourceGroups) == 1 {
+			countIndicator = countStyle.Render("1 Resource Group")
+		} else {
+			countIndicator = countStyle.Render(fmt.Sprintf("%d Resource Groups", len(m.resourceGroups)))
+		}
 	}
 
 	// Context indicator (for deeper navigation levels)
@@ -134,6 +142,8 @@ func (m model) createStatusBar() string {
 				statusMessage = "Loading containers..."
 			case modeEnvVars:
 				statusMessage = "Loading environment variables..."
+			case modeResourceGroups:
+				statusMessage = "Loading resource groups..."
 			}
 		} else {
 			// When ready, show empty message since status indicator already shows "Ready"
