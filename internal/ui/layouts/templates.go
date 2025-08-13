@@ -129,10 +129,10 @@ func (tm *TemplateManager) mergeOptions(templateOpts, providedOpts LayoutOptions
 	if providedOpts.Modal != nil {
 		merged.Modal = providedOpts.Modal
 	}
-	if providedOpts.HelpContext.Mode != "" {
+	if providedOpts.HelpContext.Mode != 0 {
 		merged.HelpContext = providedOpts.HelpContext
 	}
-	if providedOpts.StatusContext.Mode != "" {
+	if providedOpts.StatusContext.Mode != 0 {
 		merged.StatusContext = providedOpts.StatusContext
 	}
 

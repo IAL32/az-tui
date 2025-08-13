@@ -338,21 +338,21 @@ func (p *AppsPage) GetHelpKeys() []key.Binding {
 func (p *AppsPage) View() string {
 	// Use default help context (ShowAll = false)
 	return p.ViewWithHelpContext(layouts.HelpContext{
-		Mode: "Container Apps",
+		Mode: layouts.ModeApps,
 	})
 }
 
 // ViewWithHelpContext renders the apps page with help context
 func (p *AppsPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 	// Ensure the mode is set correctly
-	helpContext.Mode = "Container Apps"
+	helpContext.Mode = layouts.ModeApps
 
 	// Handle loading state
 	if p.IsLoading() {
 		return p.layoutSystem.CreateLoadingLayout(
 			"Loading container apps...",
 			layouts.StatusContext{
-				Mode:        "Container Apps",
+				Mode:        layouts.ModeApps,
 				ContextInfo: map[string]string{"resource_group": p.resourceGroupName},
 			},
 			helpContext,
@@ -365,7 +365,7 @@ func (p *AppsPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 			err.Error(),
 			"Press 'r' to retry or 'esc' to go back",
 			layouts.StatusContext{
-				Mode:        "Container Apps",
+				Mode:        layouts.ModeApps,
 				Error:       err,
 				ContextInfo: map[string]string{"resource_group": p.resourceGroupName},
 			},
@@ -378,7 +378,7 @@ func (p *AppsPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 	return p.layoutSystem.CreateTableLayout(
 		tableView,
 		layouts.StatusContext{
-			Mode:        "Container Apps",
+			Mode:        layouts.ModeApps,
 			ContextInfo: map[string]string{"resource_group": p.resourceGroupName},
 			Counters:    map[string]int{"count": len(p.GetData())},
 		},

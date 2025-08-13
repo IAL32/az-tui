@@ -214,21 +214,3 @@ func DefaultTheme() ThemeConfig {
 		},
 	}
 }
-
-// DarkTheme returns a dark theme configuration
-func DarkTheme() ThemeConfig {
-	theme := DefaultTheme()
-	theme.Colors.Background = lipgloss.Color("#1a1a1a")
-	theme.Colors.Foreground = lipgloss.Color("#ffffff")
-	theme.Colors.Border = lipgloss.Color("#444444")
-	return theme
-}
-
-// LightTheme returns a light theme configuration
-func LightTheme() ThemeConfig {
-	theme := DefaultTheme()
-	theme.Colors.Background = lipgloss.Color("#ffffff")
-	theme.Colors.Foreground = lipgloss.Color("#000000")
-	theme.Colors.Border = lipgloss.Color("#cccccc")
-	return theme
-}

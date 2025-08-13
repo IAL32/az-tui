@@ -198,21 +198,21 @@ func (p *ResourceGroupsPage) GetHelpKeys() []key.Binding {
 func (p *ResourceGroupsPage) View() string {
 	// Use default help context (ShowAll = false)
 	return p.ViewWithHelpContext(layouts.HelpContext{
-		Mode: "Resource Groups",
+		Mode: layouts.ModeResourceGroups,
 	})
 }
 
 // ViewWithHelpContext renders the resource groups page with help context
 func (p *ResourceGroupsPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 	// Ensure the mode is set correctly
-	helpContext.Mode = "Resource Groups"
+	helpContext.Mode = layouts.ModeResourceGroups
 
 	// Handle loading state
 	if p.IsLoading() {
 		return p.layoutSystem.CreateLoadingLayout(
 			"Loading resource groups...",
 			layouts.StatusContext{
-				Mode: "Resource Groups",
+				Mode: layouts.ModeResourceGroups,
 			},
 			helpContext,
 		)
@@ -224,7 +224,7 @@ func (p *ResourceGroupsPage) ViewWithHelpContext(helpContext layouts.HelpContext
 			err.Error(),
 			"Press 'r' to retry or 'q' to quit",
 			layouts.StatusContext{
-				Mode:  "Resource Groups",
+				Mode:  layouts.ModeResourceGroups,
 				Error: err,
 			},
 			helpContext,
@@ -236,7 +236,7 @@ func (p *ResourceGroupsPage) ViewWithHelpContext(helpContext layouts.HelpContext
 	return p.layoutSystem.CreateTableLayout(
 		tableView,
 		layouts.StatusContext{
-			Mode:     "Resource Groups",
+			Mode:     layouts.ModeResourceGroups,
 			Counters: map[string]int{"count": len(p.GetData())},
 		},
 		helpContext,

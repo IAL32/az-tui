@@ -73,8 +73,8 @@ func TestEnvVarsPageKeyDelegation(t *testing.T) {
 	coreModel.NavigateToEnvVars(mockContainer)
 
 	// Verify we're in envvars mode
-	if m.core.GetCurrentMode().String() != "EnvVars" {
-		t.Fatalf("Expected to be in EnvVars mode, got %s", m.core.GetCurrentMode().String())
+	if m.core.GetCurrentMode() != core.ModeEnvVars {
+		t.Fatalf("Expected to be in Environment Variables mode, got %s", m.core.GetCurrentMode().String())
 	}
 
 	// Step 4: Test key handling on envvars page
@@ -90,8 +90,8 @@ func TestEnvVarsPageKeyDelegation(t *testing.T) {
 		m = updatedModel.(model)
 
 		// Should still be in envvars mode (keys should be processed but not change mode)
-		if m.core.GetCurrentMode().String() != "EnvVars" {
-			t.Errorf("Expected to stay in EnvVars mode after key %v, got %s", keyMsg, m.core.GetCurrentMode().String())
+		if m.core.GetCurrentMode() != core.ModeEnvVars {
+			t.Errorf("Expected to stay in Environment Variables mode after key %v, got %s", keyMsg, m.core.GetCurrentMode().String())
 		}
 	}
 
@@ -103,7 +103,7 @@ func TestEnvVarsPageKeyDelegation(t *testing.T) {
 	m = updatedModel.(model)
 
 	// Should be back in containers mode
-	if m.core.GetCurrentMode().String() != "Containers" {
+	if m.core.GetCurrentMode() != core.ModeContainers {
 		t.Fatalf("Expected to be back in Containers mode after esc, got %s", m.core.GetCurrentMode().String())
 	}
 
@@ -116,13 +116,12 @@ func TestEnvVarsPageKeyDelegation(t *testing.T) {
 		initialMode := m.core.GetCurrentMode().String()
 		updatedModel, cmd := m.Update(keyMsg)
 		m = updatedModel.(model)
-		finalMode := m.core.GetCurrentMode().String()
 
-		t.Logf("Key %v: %s -> %s, cmd: %v", keyMsg, initialMode, finalMode, cmd != nil)
+		t.Logf("Key %v: %s -> %s, cmd: %v", keyMsg, initialMode, m.core.GetCurrentMode().String(), cmd != nil)
 
 		// Should still be in containers mode
-		if finalMode != "Containers" {
-			t.Errorf("BUG DETECTED: Expected to stay in Containers mode after key %v post-envvars, got %s", keyMsg, finalMode)
+		if m.core.GetCurrentMode() != core.ModeContainers {
+			t.Errorf("BUG DETECTED: Expected to stay in Containers mode after key %v post-envvars, got %s", keyMsg, m.core.GetCurrentMode().String())
 		}
 
 		// The key should be processed (either handled by page or delegated to table)
@@ -167,31 +166,31 @@ func TestEnvVarsPageKeyHandlingIsolated(t *testing.T) {
 		{
 			name:        "j_key_delegation",
 			key:         tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
-			expectMode:  "EnvVars",
+			expectMode:  "Environment Variables",
 			description: "j key should be delegated to parent but stay in envvars",
 		},
 		{
 			name:        "k_key_delegation",
 			key:         tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
-			expectMode:  "EnvVars",
+			expectMode:  "Environment Variables",
 			description: "k key should be delegated to parent but stay in envvars",
 		},
 		{
 			name:        "up_arrow_delegation",
 			key:         tea.KeyMsg{Type: tea.KeyUp},
-			expectMode:  "EnvVars",
+			expectMode:  "Environment Variables",
 			description: "up arrow should be delegated to parent but stay in envvars",
 		},
 		{
 			name:        "down_arrow_delegation",
 			key:         tea.KeyMsg{Type: tea.KeyDown},
-			expectMode:  "EnvVars",
+			expectMode:  "Environment Variables",
 			description: "down arrow should be delegated to parent but stay in envvars",
 		},
 		{
 			name:        "help_key_delegation",
 			key:         tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}},
-			expectMode:  "EnvVars",
+			expectMode:  "Environment Variables",
 			description: "? key should be delegated to parent but stay in envvars",
 		},
 		{
@@ -205,7 +204,7 @@ func TestEnvVarsPageKeyHandlingIsolated(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Reset to envvars page if needed (except for esc test)
-			if tc.name != "esc_navigation" && m.core.GetCurrentMode().String() != "EnvVars" {
+			if tc.name != "esc_navigation" && m.core.GetCurrentMode().String() != "Environment Variables" {
 				coreModel.NavigateToEnvVars(mockContainer)
 			}
 
@@ -299,7 +298,7 @@ func TestKeyHandlingFlowWithDiagnostics(t *testing.T) {
 
 	t.Logf("Containers page '?' key AFTER envvars - Mode: %s, Cmd: %v", m.core.GetCurrentMode().String(), cmd != nil)
 
-	if m.core.GetCurrentMode().String() != "Containers" {
+	if m.core.GetCurrentMode() != core.ModeContainers {
 		t.Errorf("BUG: Help key broken after envvars visit - expected Containers, got %s", m.core.GetCurrentMode().String())
 	}
 }

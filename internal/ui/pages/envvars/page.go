@@ -236,21 +236,21 @@ func (p *EnvVarsPage) GetHelpKeys() []key.Binding {
 func (p *EnvVarsPage) View() string {
 	// Use default help context (ShowAll = false)
 	return p.ViewWithHelpContext(layouts.HelpContext{
-		Mode: "Environment Variables",
+		Mode: layouts.ModeEnvVars,
 	})
 }
 
 // ViewWithHelpContext renders the environment variables page with help context
 func (p *EnvVarsPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 	// Ensure the mode is set correctly
-	helpContext.Mode = "Environment Variables"
+	helpContext.Mode = layouts.ModeEnvVars
 
 	// Handle loading state
 	if p.IsLoading() {
 		return p.layoutSystem.CreateLoadingLayout(
 			"Loading environment variables...",
 			layouts.StatusContext{
-				Mode:        "Environment Variables",
+				Mode:        layouts.ModeEnvVars,
 				ContextInfo: map[string]string{"container": p.containerName},
 			},
 			helpContext,
@@ -263,7 +263,7 @@ func (p *EnvVarsPage) ViewWithHelpContext(helpContext layouts.HelpContext) strin
 			err.Error(),
 			"Press 'r' to retry or 'esc' to go back",
 			layouts.StatusContext{
-				Mode:        "Environment Variables",
+				Mode:        layouts.ModeEnvVars,
 				Error:       err,
 				ContextInfo: map[string]string{"container": p.containerName},
 			},
@@ -276,7 +276,7 @@ func (p *EnvVarsPage) ViewWithHelpContext(helpContext layouts.HelpContext) strin
 	return p.layoutSystem.CreateTableLayout(
 		tableView,
 		layouts.StatusContext{
-			Mode:        "Environment Variables",
+			Mode:        layouts.ModeEnvVars,
 			ContextInfo: map[string]string{"container": p.containerName},
 			Counters:    map[string]int{"count": len(p.GetData())},
 		},

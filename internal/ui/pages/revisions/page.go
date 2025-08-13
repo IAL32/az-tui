@@ -366,21 +366,21 @@ func (p *RevisionsPage) GetHelpKeys() []key.Binding {
 func (p *RevisionsPage) View() string {
 	// Use default help context (ShowAll = false)
 	return p.ViewWithHelpContext(layouts.HelpContext{
-		Mode: "Revisions",
+		Mode: layouts.ModeRevisions,
 	})
 }
 
 // ViewWithHelpContext renders the revisions page with help context
 func (p *RevisionsPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 	// Ensure the mode is set correctly
-	helpContext.Mode = "Revisions"
+	helpContext.Mode = layouts.ModeRevisions
 
 	// Handle loading state
 	if p.IsLoading() {
 		return p.layoutSystem.CreateLoadingLayout(
 			"Loading revisions...",
 			layouts.StatusContext{
-				Mode:        "Revisions",
+				Mode:        layouts.ModeRevisions,
 				ContextInfo: map[string]string{"app": p.appName},
 			},
 			helpContext,
@@ -393,7 +393,7 @@ func (p *RevisionsPage) ViewWithHelpContext(helpContext layouts.HelpContext) str
 			err.Error(),
 			"Press 'r' to retry or 'esc' to go back",
 			layouts.StatusContext{
-				Mode:        "Revisions",
+				Mode:        layouts.ModeRevisions,
 				Error:       err,
 				ContextInfo: map[string]string{"app": p.appName},
 			},
@@ -406,7 +406,7 @@ func (p *RevisionsPage) ViewWithHelpContext(helpContext layouts.HelpContext) str
 	return p.layoutSystem.CreateTableLayout(
 		tableView,
 		layouts.StatusContext{
-			Mode:        "Revisions",
+			Mode:        layouts.ModeRevisions,
 			ContextInfo: map[string]string{"app": p.appName},
 			Counters:    map[string]int{"count": len(p.GetData())},
 		},

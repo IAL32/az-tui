@@ -27,18 +27,16 @@ func (f *DefaultStatusBarFactory) CreateStatusBar(context StatusContext) string 
 	// Mode indicator
 	var modeIndicator string
 	switch context.Mode {
-	case "apps":
+	case ModeApps:
 		modeIndicator = f.theme.GetStyle("modeApps").Render("📦 APPS")
-	case "revisions":
+	case ModeRevisions:
 		modeIndicator = f.theme.GetStyle("modeRevisions").Render("🔄 REVISIONS")
-	case "containers":
+	case ModeContainers:
 		modeIndicator = f.theme.GetStyle("modeContainers").Render("🐳 CONTAINERS")
-	case "envvars":
+	case ModeEnvVars:
 		modeIndicator = f.theme.GetStyle("modeContainers").Render("🔧 ENV VARS")
-	case "resourcegroups":
+	case ModeResourceGroups:
 		modeIndicator = f.theme.GetStyle("modeApps").Render("📁 RESOURCE GROUPS")
-	case "context":
-		modeIndicator = f.theme.GetStyle("modeApps").Render("🎯 CONTEXT SELECTION")
 	default:
 		modeIndicator = f.theme.GetStyle("modeApps").Render("📦 APPS")
 	}
@@ -69,9 +67,13 @@ func (f *DefaultStatusBarFactory) CreateStatusBar(context StatusContext) string 
 
 	// Context info indicators
 	var contextIndicators []string
-	for name, value := range context.ContextInfo {
-		indicator := f.theme.GetStyle("context").Render(fmt.Sprintf("%s: %s", name, value))
-		contextIndicators = append(contextIndicators, indicator)
+	// Define consistent key order to ensure deterministic display
+	keyOrder := []string{"app", "revision", "container", "resource_group"}
+	for _, name := range keyOrder {
+		if value, exists := context.ContextInfo[name]; exists {
+			indicator := f.theme.GetStyle("context").Render(fmt.Sprintf("%s: %s", name, value))
+			contextIndicators = append(contextIndicators, indicator)
+		}
 	}
 
 	// Calculate widths for fixed elements
@@ -136,18 +138,16 @@ func (f *DefaultHelpBarFactory) CreateHelpBar(context HelpContext) string {
 
 	// Add mode-specific help
 	switch context.Mode {
-	case "Container Apps", "apps":
+	case ModeApps:
 		helpItems = append(helpItems, "enter: view revisions", "l: logs", "s/e: exec", "r: refresh", "/: filter", "esc: back", "?: help", "q: quit")
-	case "Revisions", "revisions":
+	case ModeRevisions:
 		helpItems = append(helpItems, "enter: view containers", "R: restart", "l: logs", "s: exec", "r: refresh", "/: filter", "esc: back", "?: help", "q: quit")
-	case "Containers", "containers":
+	case ModeContainers:
 		helpItems = append(helpItems, "v: env vars", "s: shell", "l: logs", "r: refresh", "/: filter", "esc: back", "?: help", "q: quit")
-	case "Environment Variables", "envvars":
+	case ModeEnvVars:
 		helpItems = append(helpItems, "/: filter", "shift+←/→: scroll", "esc: back", "?: help", "q: quit")
-	case "Resource Groups", "resourcegroups":
+	case ModeResourceGroups:
 		helpItems = append(helpItems, "enter: select", "r: refresh", "/: filter", "?: help", "q: quit")
-	case "Context Selection", "context":
-		helpItems = append(helpItems, "↑/↓: navigate", "enter: select", "esc: cancel", "?: help", "q: quit")
 	default:
 		helpItems = append(helpItems, "?: help", "q: quit")
 	}

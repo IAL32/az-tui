@@ -23,13 +23,13 @@ func TestLayoutSystem_TableLayout(t *testing.T) {
 	ls := NewLayoutSystem(80, 24)
 
 	statusContext := StatusContext{
-		Mode:     "apps",
+		Mode:     ModeApps,
 		Loading:  false,
 		Counters: map[string]int{"App": 5},
 	}
 
 	helpContext := HelpContext{
-		Mode:    "apps",
+		Mode:    ModeApps,
 		ShowAll: false,
 	}
 
@@ -49,12 +49,12 @@ func TestLayoutSystem_LoadingLayout(t *testing.T) {
 	ls := NewLayoutSystem(80, 24)
 
 	statusContext := StatusContext{
-		Mode:    "apps",
+		Mode:    ModeApps,
 		Loading: true,
 	}
 
 	helpContext := HelpContext{
-		Mode: "apps",
+		Mode: ModeApps,
 	}
 
 	message := "Loading apps..."
@@ -73,12 +73,12 @@ func TestLayoutSystem_ErrorLayout(t *testing.T) {
 	ls := NewLayoutSystem(80, 24)
 
 	statusContext := StatusContext{
-		Mode:  "apps",
+		Mode:  ModeApps,
 		Error: nil,
 	}
 
 	helpContext := HelpContext{
-		Mode: "apps",
+		Mode: ModeApps,
 	}
 
 	errorMsg := "Connection failed"
@@ -98,11 +98,11 @@ func TestLayoutSystem_ModalLayout(t *testing.T) {
 	ls := NewLayoutSystem(80, 24)
 
 	statusContext := StatusContext{
-		Mode: "apps",
+		Mode: ModeApps,
 	}
 
 	helpContext := HelpContext{
-		Mode: "apps",
+		Mode: ModeApps,
 	}
 
 	content := "Are you sure?"

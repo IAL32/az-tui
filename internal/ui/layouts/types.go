@@ -4,6 +4,35 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Mode represents the current page mode
+type Mode int
+
+const (
+	ModeResourceGroups Mode = iota
+	ModeApps
+	ModeRevisions
+	ModeContainers
+	ModeEnvVars
+)
+
+// String returns the string representation of the mode
+func (m Mode) String() string {
+	switch m {
+	case ModeResourceGroups:
+		return "Resource Groups"
+	case ModeApps:
+		return "Container Apps"
+	case ModeRevisions:
+		return "Revisions"
+	case ModeContainers:
+		return "Containers"
+	case ModeEnvVars:
+		return "Environment Variables"
+	default:
+		return "Unknown"
+	}
+}
+
 // Config holds the layout manager configuration
 type Config struct {
 	// Theme configuration
@@ -59,7 +88,7 @@ type ModalOptions struct {
 
 // HelpContext provides context for help bar creation
 type HelpContext struct {
-	Mode          string
+	Mode          Mode
 	ShowAll       bool
 	CustomKeys    []string
 	CustomHelp    map[string]string
@@ -68,7 +97,7 @@ type HelpContext struct {
 
 // StatusContext provides context for status bar creation
 type StatusContext struct {
-	Mode          string
+	Mode          Mode
 	Loading       bool
 	Error         error
 	StatusMessage string

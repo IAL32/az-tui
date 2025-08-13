@@ -239,7 +239,7 @@ func (pm *PageManager) View() string {
 // ViewWithHelpContext renders the current page with help context
 func (pm *PageManager) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 	// Set the mode in the help context based on current mode
-	helpContext.Mode = pm.navigationManager.GetCurrentMode().String()
+	helpContext.Mode = pm.navigationManager.GetCurrentMode()
 
 	switch pm.navigationManager.GetCurrentMode() {
 	case ModeResourceGroups:

@@ -322,21 +322,21 @@ func (p *ContainersPage) GetHelpKeys() []key.Binding {
 func (p *ContainersPage) View() string {
 	// Use default help context (ShowAll = false)
 	return p.ViewWithHelpContext(layouts.HelpContext{
-		Mode: "Containers",
+		Mode: layouts.ModeContainers,
 	})
 }
 
 // ViewWithHelpContext renders the containers page with help context
 func (p *ContainersPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 	// Ensure the mode is set correctly
-	helpContext.Mode = "Containers"
+	helpContext.Mode = layouts.ModeContainers
 
 	// Handle loading state
 	if p.IsLoading() {
 		return p.layoutSystem.CreateLoadingLayout(
 			"Loading containers...",
 			layouts.StatusContext{
-				Mode: "Containers",
+				Mode: layouts.ModeContainers,
 				ContextInfo: map[string]string{
 					"app":      p.appName,
 					"revision": p.revisionName,
@@ -352,7 +352,7 @@ func (p *ContainersPage) ViewWithHelpContext(helpContext layouts.HelpContext) st
 			err.Error(),
 			"Press 'r' to retry or 'esc' to go back",
 			layouts.StatusContext{
-				Mode:  "Containers",
+				Mode:  layouts.ModeContainers,
 				Error: err,
 				ContextInfo: map[string]string{
 					"app":      p.appName,
@@ -368,7 +368,7 @@ func (p *ContainersPage) ViewWithHelpContext(helpContext layouts.HelpContext) st
 	return p.layoutSystem.CreateTableLayout(
 		tableView,
 		layouts.StatusContext{
-			Mode: "Containers",
+			Mode: layouts.ModeContainers,
 			ContextInfo: map[string]string{
 				"app":      p.appName,
 				"revision": p.revisionName,

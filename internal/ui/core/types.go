@@ -1,37 +1,21 @@
 package core
 
 import (
+	"github.com/IAL32/az-tui/internal/ui/layouts"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Mode represents the current page mode
-type Mode int
+// Mode type alias to layouts.Mode for backward compatibility
+type Mode = layouts.Mode
 
+// Mode constants for backward compatibility
 const (
-	ModeResourceGroups Mode = iota
-	ModeApps
-	ModeRevisions
-	ModeContainers
-	ModeEnvVars
+	ModeResourceGroups = layouts.ModeResourceGroups
+	ModeApps           = layouts.ModeApps
+	ModeRevisions      = layouts.ModeRevisions
+	ModeContainers     = layouts.ModeContainers
+	ModeEnvVars        = layouts.ModeEnvVars
 )
-
-// String returns the string representation of the mode
-func (m Mode) String() string {
-	switch m {
-	case ModeResourceGroups:
-		return "Resource Groups"
-	case ModeApps:
-		return "Container Apps"
-	case ModeRevisions:
-		return "Revisions"
-	case ModeContainers:
-		return "Containers"
-	case ModeEnvVars:
-		return "Environment Variables"
-	default:
-		return "Unknown"
-	}
-}
 
 // NavigationState holds the current navigation context
 type NavigationState struct {

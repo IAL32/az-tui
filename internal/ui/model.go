@@ -606,13 +606,13 @@ func (m model) viewContextList() string {
 	// Create the context layout using the layout system
 	layoutSystem := m.core.GetLayoutSystem()
 	statusContext := layouts.StatusContext{
-		Mode:          m.core.GetModeString(),
+		Mode:          m.core.GetCurrentMode(),
 		StatusMessage: m.core.GetStatusLine(),
 		Error:         m.core.GetError(),
 		ContextInfo:   map[string]string{"breadcrumb": m.core.GetBreadcrumb()},
 	}
 	helpContext := layouts.HelpContext{
-		Mode:    m.core.GetModeString(),
+		Mode:    m.core.GetCurrentMode(),
 		ShowAll: m.help.ShowAll,
 	}
 
