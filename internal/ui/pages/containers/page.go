@@ -254,7 +254,7 @@ func (p *ContainersPage) createContainersTable(data []models.Container) table.Mo
 				"envcount":  envCount,
 				"probes":    probes,
 				"volumes":   volumes,
-				"status":    table.NewStyledCell("Running", lipgloss.NewStyle().Foreground(getStatusColor("Running"))),
+				"status":    table.NewStyledCell("Running", lipgloss.NewStyle().Foreground(pages.GetStatusColor("Running"))),
 			})
 		}
 	}
@@ -380,17 +380,3 @@ func (p *ContainersPage) ViewWithHelpContext(helpContext layouts.HelpContext) st
 }
 
 // Helper functions
-
-// getStatusColor returns a color for the given status
-func getStatusColor(status string) lipgloss.Color {
-	switch status {
-	case "Running", "Succeeded":
-		return lipgloss.Color("#32CD32") // Success green
-	case "Failed", "Error":
-		return lipgloss.Color("#FF6B6B") // Error red
-	case "Pending", "Creating", "Updating":
-		return lipgloss.Color("#FFB347") // Warning yellow
-	default:
-		return lipgloss.Color("#808080") // Gray
-	}
-}

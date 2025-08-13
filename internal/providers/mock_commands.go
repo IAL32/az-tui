@@ -18,37 +18,30 @@ func NewMockCommandProvider() *MockCommandProvider {
 	return &MockCommandProvider{}
 }
 
-// ExecIntoApp simulates executing a shell into the app's latest revision
 func (m *MockCommandProvider) ExecIntoApp(app models.ContainerApp) tea.Cmd {
 	return m.mockExecCommand(fmt.Sprintf("Executing shell into app '%s' (latest revision)", app.Name))
 }
 
-// ExecIntoRevision simulates executing a shell into a specific revision
 func (m *MockCommandProvider) ExecIntoRevision(app models.ContainerApp, revision string) tea.Cmd {
 	return m.mockExecCommand(fmt.Sprintf("Executing shell into app '%s', revision '%s'", app.Name, revision))
 }
 
-// ExecIntoContainer simulates executing a shell into a specific container within a revision
 func (m *MockCommandProvider) ExecIntoContainer(app models.ContainerApp, revision, container string) tea.Cmd {
 	return m.mockExecCommand(fmt.Sprintf("Executing shell into container '%s' in app '%s', revision '%s'", container, app.Name, revision))
 }
 
-// ShowAppLogs simulates showing logs for the entire app
 func (m *MockCommandProvider) ShowAppLogs(app models.ContainerApp) tea.Cmd {
 	return m.mockLogsCommand(fmt.Sprintf("Showing logs for app '%s'", app.Name))
 }
 
-// ShowRevisionLogs simulates showing logs for a specific revision
 func (m *MockCommandProvider) ShowRevisionLogs(app models.ContainerApp, revision string) tea.Cmd {
 	return m.mockLogsCommand(fmt.Sprintf("Showing logs for app '%s', revision '%s'", app.Name, revision))
 }
 
-// ShowContainerLogs simulates showing logs for a specific container within a revision
 func (m *MockCommandProvider) ShowContainerLogs(app models.ContainerApp, revision, container string) tea.Cmd {
 	return m.mockLogsCommand(fmt.Sprintf("Showing logs for container '%s' in app '%s', revision '%s'", container, app.Name, revision))
 }
 
-// RestartRevision simulates restarting a specific revision
 func (m *MockCommandProvider) RestartRevision(app models.ContainerApp, revision string) tea.Cmd {
 	return func() tea.Msg {
 		// Simulate the restart operation

@@ -1,8 +1,11 @@
 package pages
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Common key bindings that can be reused across pages
@@ -64,32 +67,89 @@ var (
 	)
 )
 
+// BaseKeyMap provides a comprehensive set of common key bindings
+type BaseKeyMap struct {
+	// Navigation
+	Enter key.Binding
+	Back  key.Binding
+	Quit  key.Binding
+
+	// Actions
+	Refresh key.Binding
+	Filter  key.Binding
+	Help    key.Binding
+
+	// Table navigation
+	ScrollLeft  key.Binding
+	ScrollRight key.Binding
+
+	// Specific actions
+	Logs    key.Binding
+	Exec    key.Binding
+	EnvVars key.Binding
+	Restart key.Binding
+}
+
+// NewBaseKeyMap creates a new BaseKeyMap with default bindings
+func NewBaseKeyMap() BaseKeyMap {
+	return BaseKeyMap{
+		Enter:       EnterKey,
+		Back:        BackKey,
+		Quit:        QuitKey,
+		Refresh:     RefreshKey,
+		Filter:      FilterKey,
+		Help:        HelpKey,
+		ScrollLeft:  ScrollLeftKey,
+		ScrollRight: ScrollRightKey,
+		Logs:        LogsKey,
+		Exec:        ExecKey,
+		EnvVars:     EnvVarsKey,
+		Restart:     RestartKey,
+	}
+}
+
 // GetCommonKeys returns the common key bindings used across all pages
-func GetCommonKeys() []key.Binding {
+func (b BaseKeyMap) GetCommonKeys() []key.Binding {
 	return []key.Binding{
-		RefreshKey,
-		FilterKey,
-		ScrollLeftKey,
-		ScrollRightKey,
-		HelpKey,
-		BackKey,
-		QuitKey,
+		b.Refresh,
+		b.Filter,
+		b.ScrollLeft,
+		b.ScrollRight,
+		b.Help,
+		b.Back,
+		b.Quit,
 	}
 }
 
 // GetNavigationKeys returns key bindings for navigable pages
-func GetNavigationKeys() []key.Binding {
-	return append([]key.Binding{EnterKey}, GetCommonKeys()...)
+func (b BaseKeyMap) GetNavigationKeys() []key.Binding {
+	return append([]key.Binding{b.Enter}, b.GetCommonKeys()...)
 }
 
 // GetActionKeys returns key bindings for actionable pages
-func GetActionKeys() []key.Binding {
+func (b BaseKeyMap) GetActionKeys() []key.Binding {
 	return []key.Binding{
-		LogsKey,
-		ExecKey,
-		EnvVarsKey,
-		RestartKey,
+		b.Logs,
+		b.Exec,
+		b.EnvVars,
+		b.Restart,
 	}
+}
+
+// Legacy functions for backward compatibility
+func GetCommonKeys() []key.Binding {
+	base := NewBaseKeyMap()
+	return base.GetCommonKeys()
+}
+
+func GetNavigationKeys() []key.Binding {
+	base := NewBaseKeyMap()
+	return base.GetNavigationKeys()
+}
+
+func GetActionKeys() []key.Binding {
+	base := NewBaseKeyMap()
+	return base.GetActionKeys()
 }
 
 // KeyMatcher provides utility functions for matching key events
@@ -288,4 +348,26 @@ func (v *Validator) ValidateAction(actionName string, availableActions []string)
 		}
 	}
 	return Error(ErrActionNotAvailable)
+}
+
+// GetStatusColor returns a color for the given status string.
+// This function handles all status types used across different pages:
+// - Success states: Running, Succeeded, Healthy, Active
+// - Error states: Failed, Error, Unhealthy
+// - Warning states: Pending, Creating, Updating
+// - Default: Gray for unknown states
+func GetStatusColor(status string) lipgloss.Color {
+	// Normalize status to lowercase for consistent matching
+	normalizedStatus := strings.ToLower(status)
+
+	switch normalizedStatus {
+	case "running", "succeeded", "healthy", "active":
+		return lipgloss.Color("#32CD32") // Success green
+	case "failed", "error", "unhealthy":
+		return lipgloss.Color("#FF6B6B") // Error red
+	case "pending", "creating", "updating":
+		return lipgloss.Color("#FFB347") // Warning yellow
+	default:
+		return lipgloss.Color("#808080") // Gray
+	}
 }

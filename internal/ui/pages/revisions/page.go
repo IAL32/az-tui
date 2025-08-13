@@ -283,10 +283,10 @@ func (p *RevisionsPage) createRevisionsTable(data []models.Revision) table.Model
 				"replicas":  replicas,
 				"scaling":   scaling,
 				"resources": resources,
-				"health":    table.NewStyledCell(health, lipgloss.NewStyle().Foreground(getStatusColor(health))),
-				"running":   table.NewStyledCell(running, lipgloss.NewStyle().Foreground(getStatusColor(running))),
+				"health":    table.NewStyledCell(health, lipgloss.NewStyle().Foreground(pages.GetStatusColor(health))),
+				"running":   table.NewStyledCell(running, lipgloss.NewStyle().Foreground(pages.GetStatusColor(running))),
 				"created":   created,
-				"status":    table.NewStyledCell(status, lipgloss.NewStyle().Foreground(getStatusColor(status))),
+				"status":    table.NewStyledCell(status, lipgloss.NewStyle().Foreground(pages.GetStatusColor(status))),
 				"fqdn":      fqdn,
 			})
 		}
@@ -415,17 +415,3 @@ func (p *RevisionsPage) ViewWithHelpContext(helpContext layouts.HelpContext) str
 }
 
 // Helper functions
-
-// getStatusColor returns a color for the given status
-func getStatusColor(status string) lipgloss.Color {
-	switch status {
-	case "Running", "Succeeded", "Healthy":
-		return lipgloss.Color("#32CD32") // Success green
-	case "Failed", "Error", "Unhealthy":
-		return lipgloss.Color("#FF6B6B") // Error red
-	case "Pending", "Creating", "Updating":
-		return lipgloss.Color("#FFB347") // Warning yellow
-	default:
-		return lipgloss.Color("#808080") // Gray
-	}
-}

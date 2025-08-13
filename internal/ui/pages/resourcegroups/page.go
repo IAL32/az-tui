@@ -145,7 +145,7 @@ func (p *ResourceGroupsPage) createResourceGroupsTable(data []models.ResourceGro
 			rows[i] = table.NewRow(table.RowData{
 				"name":     rg.Name,
 				"location": rg.Location,
-				"state":    table.NewStyledCell(state, lipgloss.NewStyle().Foreground(getStatusColor(state))),
+				"state":    table.NewStyledCell(state, lipgloss.NewStyle().Foreground(pages.GetStatusColor(state))),
 				"tags":     tags,
 			})
 		}
@@ -301,18 +301,4 @@ func truncateStringUnicodeSafe(s string, maxLength int, suffix string) string {
 	}
 
 	return string(runes[:targetLength]) + suffix
-}
-
-// getStatusColor returns a color for the given status
-func getStatusColor(status string) lipgloss.Color {
-	switch strings.ToLower(status) {
-	case "succeeded", "active", "running":
-		return lipgloss.Color("#32CD32") // Success green
-	case "failed", "error":
-		return lipgloss.Color("#FF6B6B") // Error red
-	case "pending", "creating", "updating":
-		return lipgloss.Color("#FFB347") // Warning yellow
-	default:
-		return lipgloss.Color("#808080") // Gray
-	}
 }

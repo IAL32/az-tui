@@ -288,21 +288,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
 	default:
-		// Handle spinner updates
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-
-		// Delegate to core for other message types
+		// Handle spinner updates and delegate to core
+		var spinnerCmd tea.Cmd
+		m.spinner, spinnerCmd = m.spinner.Update(msg)
 		coreCmd := m.core.HandleMessage(msg)
 
-		if cmd != nil && coreCmd != nil {
-			return m, tea.Batch(cmd, coreCmd)
-		} else if cmd != nil {
-			return m, cmd
-		} else if coreCmd != nil {
-			return m, coreCmd
+		// Batch non-nil commands efficiently
+		var cmds []tea.Cmd
+		if spinnerCmd != nil {
+			cmds = append(cmds, spinnerCmd)
+		}
+		if coreCmd != nil {
+			cmds = append(cmds, coreCmd)
 		}
 
+		if len(cmds) > 0 {
+			return m, tea.Batch(cmds...)
+		}
 		return m, nil
 	}
 }
@@ -683,14 +685,4 @@ func createCommandProvider(useMockMode bool) providers.CommandProvider {
 		return providers.NewMockCommandProvider()
 	}
 	return providers.NewAzureCommandProvider()
-}
-
-// Helper methods for compatibility with existing code
-
-// Helper function to get minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

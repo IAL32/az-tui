@@ -232,11 +232,3 @@ func (f *DefaultComponentFactory) CreateModalComponent(content string, options M
 
 	return modalStyle.Render(content)
 }
-
-// Helper function for max
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}

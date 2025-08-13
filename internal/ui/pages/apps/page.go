@@ -252,7 +252,7 @@ func (p *AppsPage) createAppsTable(data []models.ContainerApp) table.Model {
 			rows[i] = table.NewRow(table.RowData{
 				"name":      app.Name,
 				"location":  app.Location,
-				"status":    table.NewStyledCell(status, lipgloss.NewStyle().Foreground(getStatusColor(status))),
+				"status":    table.NewStyledCell(status, lipgloss.NewStyle().Foreground(pages.GetStatusColor(status))),
 				"replicas":  replicas,
 				"resources": resources,
 				"ingress":   ingress,
@@ -387,17 +387,3 @@ func (p *AppsPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
 }
 
 // Helper functions
-
-// getStatusColor returns a color for the given status
-func getStatusColor(status string) lipgloss.Color {
-	switch status {
-	case "Running", "Succeeded":
-		return lipgloss.Color("#32CD32") // Success green
-	case "Failed", "Error":
-		return lipgloss.Color("#FF6B6B") // Error red
-	case "Pending", "Creating", "Updating":
-		return lipgloss.Color("#FFB347") // Warning yellow
-	default:
-		return lipgloss.Color("#808080") // Gray
-	}
-}
