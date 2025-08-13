@@ -1,7 +1,7 @@
 package ui
 
 import (
-	models "github.com/IAL32/az-tui/internal/models"
+	"github.com/IAL32/az-tui/internal/ui/core"
 )
 
 // Table column keys for Apps mode
@@ -54,31 +54,11 @@ const (
 	columnKeyRGTags     = "tags"
 )
 
-// Message types for different operations
-type loadedAppsMsg struct {
-	apps []models.ContainerApp
-	err  error
-}
-
-type loadedRevsMsg struct {
-	revs []models.Revision
-	err  error
-}
-
-type loadedContainersMsg struct {
-	appID   string
-	revName string
-	ctrs    []models.Container
-	err     error
-}
-
-type revisionRestartedMsg struct {
-	appID   string
-	revName string
-	err     error
-}
-
-type loadedResourceGroupsMsg struct {
-	resourceGroups []models.ResourceGroup
-	err            error
-}
+// Message type aliases for backward compatibility
+// These now use the core message types
+type loadedAppsMsg = core.LoadedAppsMsg
+type loadedRevsMsg = core.LoadedRevisionsMsg
+type loadedContainersMsg = core.LoadedContainersMsg
+type revisionRestartedMsg = core.RevisionRestartedMsg
+type loadedResourceGroupsMsg = core.LoadedResourceGroupsMsg
+type leaveEnvVarsMsg = core.LeaveEnvVarsMsg

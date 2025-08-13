@@ -4,18 +4,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IAL32/az-tui/internal/ui/components/filter"
 	"github.com/evertras/bubble-table/table"
 )
 
 // NewFuzzyFilter returns a filterFunc that performs case-insensitive fuzzy
 // matching (subsequence) over the concatenation of all filterable column values.
+// This is compatible with the new filter component system.
 // Example wiring:
 //
 //	m.filterFunc = NewFuzzyFilter(m.columns)
 func NewFuzzyFilter(columns []table.Column) func(table.Row, string) bool {
-	return func(row table.Row, filter string) bool {
-		filter = strings.TrimSpace(filter)
-		if filter == "" {
+	return func(row table.Row, filterText string) bool {
+		filterText = strings.TrimSpace(filterText)
+		if filterText == "" {
 			return true
 		}
 
@@ -50,13 +52,25 @@ func NewFuzzyFilter(columns []table.Column) func(table.Row, string) bool {
 		}
 
 		// Support multi-token filters: "acme stl" must fuzzy-match both tokens
-		for _, token := range strings.Fields(strings.ToLower(filter)) {
+		for _, token := range strings.Fields(strings.ToLower(filterText)) {
 			if !fuzzySubsequenceMatch(haystack, token) {
 				return false
 			}
 		}
 		return true
 	}
+}
+
+// CreateFilterInput creates a new filter input for the given placeholder
+// This provides integration with the new filter component system
+func CreateFilterInput(placeholder string) filter.FilterInput {
+	return filter.NewFilterInput(placeholder)
+}
+
+// CreateFilterState creates a new filter state with all inputs initialized
+// This provides integration with the new filter component system
+func CreateFilterState() filter.FilterState {
+	return filter.NewFilterState()
 }
 
 // fuzzySubsequenceMatch returns true if all runes in needle appear in order
