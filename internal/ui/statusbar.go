@@ -40,22 +40,22 @@ func (m model) createStatusBar() string {
 	// Check if any filter input is focused
 	switch m.mode {
 	case modeApps:
-		filterActive = m.appsFilterInput.Focused()
+		filterActive = m.appsPage.FilterInput.Focused()
 	case modeRevs:
-		filterActive = m.revisionsFilterInput.Focused()
+		filterActive = m.revisionsPage.FilterInput.Focused()
 	case modeContainers:
-		filterActive = m.containersFilterInput.Focused()
+		filterActive = m.containersPage.FilterInput.Focused()
 	case modeEnvVars:
-		filterActive = m.envVarsFilterInput.Focused()
+		filterActive = m.envVarsPage.FilterInput.Focused()
 	case modeResourceGroups:
-		filterActive = m.resourceGroupsFilterInput.Focused()
+		filterActive = m.resourceGroupsPage.FilterInput.Focused()
 	}
 
 	if filterActive {
 		statusIndicator = statusLoadingStyle.Render("Filtering")
-	} else if m.loading {
+	} else if m.isAnyPageLoading() {
 		statusIndicator = statusLoadingStyle.Render("Loading " + m.spinner.View())
-	} else if m.err != nil {
+	} else if m.hasAnyPageError() {
 		statusIndicator = statusErrorStyle.Render("Error")
 	} else {
 		statusIndicator = statusReadyStyle.Render("Ready")
@@ -74,28 +74,28 @@ func (m model) createStatusBar() string {
 	} else {
 		switch m.mode {
 		case modeApps:
-			if len(m.apps) == 1 {
+			if len(m.appsPage.Data) == 1 {
 				countIndicator = countStyle.Render("1 App")
 			} else {
-				countIndicator = countStyle.Render(fmt.Sprintf("%d Apps", len(m.apps)))
+				countIndicator = countStyle.Render(fmt.Sprintf("%d Apps", len(m.appsPage.Data)))
 			}
 		case modeRevs:
-			if len(m.revs) == 1 {
+			if len(m.revisionsPage.Data) == 1 {
 				countIndicator = countStyle.Render("1 Revision")
 			} else {
-				countIndicator = countStyle.Render(fmt.Sprintf("%d Revisions", len(m.revs)))
+				countIndicator = countStyle.Render(fmt.Sprintf("%d Revisions", len(m.revisionsPage.Data)))
 			}
 		case modeContainers:
-			if len(m.ctrs) == 1 {
+			if len(m.containersPage.Data) == 1 {
 				countIndicator = countStyle.Render("1 Container")
 			} else {
-				countIndicator = countStyle.Render(fmt.Sprintf("%d Containers", len(m.ctrs)))
+				countIndicator = countStyle.Render(fmt.Sprintf("%d Containers", len(m.containersPage.Data)))
 			}
 		case modeEnvVars:
 			// Count environment variables for the current container
 			envCount := 0
 			if m.currentContainerName != "" {
-				for _, ctr := range m.ctrs {
+				for _, ctr := range m.containersPage.Data {
 					if ctr.Name == m.currentContainerName {
 						envCount = len(ctr.Env)
 						break
@@ -108,10 +108,10 @@ func (m model) createStatusBar() string {
 				countIndicator = countStyle.Render(fmt.Sprintf("%d Env Vars", envCount))
 			}
 		case modeResourceGroups:
-			if len(m.resourceGroups) == 1 {
+			if len(m.resourceGroupsPage.Data) == 1 {
 				countIndicator = countStyle.Render("1 Resource Group")
 			} else {
-				countIndicator = countStyle.Render(fmt.Sprintf("%d Resource Groups", len(m.resourceGroups)))
+				countIndicator = countStyle.Render(fmt.Sprintf("%d Resource Groups", len(m.resourceGroupsPage.Data)))
 			}
 		}
 	}
@@ -135,8 +135,8 @@ func (m model) createStatusBar() string {
 
 	// Resource group indicator
 	var rgIndicator string
-	if m.rg != "" {
-		rgIndicator = rgStyle.Render("RG: " + m.rg)
+	if m.currentRG != "" {
+		rgIndicator = rgStyle.Render("RG: " + m.currentRG)
 	}
 
 	// Calculate widths for fixed elements
@@ -148,9 +148,9 @@ func (m model) createStatusBar() string {
 	// Status message (expandable middle section)
 	statusMessage := m.statusLine
 	if statusMessage == "" {
-		if m.err != nil {
-			statusMessage = m.err.Error()
-		} else if m.loading {
+		if m.hasAnyPageError() {
+			statusMessage = m.getCurrentPageError().Error()
+		} else if m.isAnyPageLoading() {
 			switch m.mode {
 			case modeApps:
 				statusMessage = "Loading container apps..."

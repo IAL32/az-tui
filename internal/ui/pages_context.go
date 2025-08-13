@@ -189,15 +189,15 @@ func (m model) handleContextListKey(msg tea.KeyMsg) (model, tea.Cmd) {
 				// From resource groups to apps
 				m.mode = modeApps
 				m.context = contextApps
-				m.loading = true
-				m.apps = nil
-				m.appsTable = m.createAppsTable()
+				m.appsPage.IsLoading = true
+				m.appsPage.Data = nil
+				m.appsPage.Table = m.createAppsTable()
 				m.showContextList = false
 
-				if m.rg != "" {
+				if m.currentRG != "" {
 					// Load apps for specific resource group
-					m.statusLine = "Loading Container Apps for " + m.rg
-					return m, LoadAppsCmd(m.dataProvider, m.rg)
+					m.statusLine = "Loading Container Apps for " + m.currentRG
+					return m, LoadAppsCmd(m.dataProvider, m.currentRG)
 				} else {
 					// Load all apps across all resource groups
 					m.statusLine = "Loading All Container Apps"

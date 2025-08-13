@@ -15,7 +15,7 @@ func createTestModelWithData(t *testing.T) model {
 
 	// Simulate that data has been loaded by setting loading to false
 	// In a real scenario, this would happen through the Init() and Update() cycle
-	m.loading = false
+	m.resourceGroupsPage.IsLoading = false
 
 	return m
 }
@@ -30,7 +30,7 @@ func TestBasicModelCreation(t *testing.T) {
 		t.Errorf("Expected initial mode to be modeResourceGroups, got %v", m.mode)
 	}
 
-	if !m.loading {
+	if !m.resourceGroupsPage.IsLoading {
 		t.Error("Expected model to be in loading state initially")
 	}
 

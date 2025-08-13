@@ -181,3 +181,50 @@ func (m model) createUnifiedTable(columns []table.Column, rows []table.Row, filt
 
 	return t
 }
+
+// Helper methods for checking page states across the hierarchical model
+
+// isAnyPageLoading checks if any page is currently loading
+func (m model) isAnyPageLoading() bool {
+	return m.resourceGroupsPage.IsLoading ||
+		m.appsPage.IsLoading ||
+		m.revisionsPage.IsLoading ||
+		m.containersPage.IsLoading ||
+		m.envVarsPage.IsLoading
+}
+
+// hasAnyPageError checks if any page has an error
+func (m model) hasAnyPageError() bool {
+	return m.resourceGroupsPage.Error != nil ||
+		m.appsPage.Error != nil ||
+		m.revisionsPage.Error != nil ||
+		m.containersPage.Error != nil ||
+		m.envVarsPage.Error != nil
+}
+
+// getCurrentPageError returns the error for the current page
+func (m model) getCurrentPageError() error {
+	switch m.mode {
+	case modeResourceGroups:
+		return m.resourceGroupsPage.Error
+	case modeApps:
+		return m.appsPage.Error
+	case modeRevs:
+		return m.revisionsPage.Error
+	case modeContainers:
+		return m.containersPage.Error
+	case modeEnvVars:
+		return m.envVarsPage.Error
+	default:
+		return nil
+	}
+}
+
+// isAnyFilterActive checks if any filter input is currently active
+func (m model) isAnyFilterActive() bool {
+	return m.resourceGroupsPage.FilterInput.Focused() ||
+		m.appsPage.FilterInput.Focused() ||
+		m.revisionsPage.FilterInput.Focused() ||
+		m.containersPage.FilterInput.Focused() ||
+		m.envVarsPage.FilterInput.Focused()
+}

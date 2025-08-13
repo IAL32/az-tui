@@ -83,15 +83,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		switch m.mode {
 		case modeApps:
-			m.appsTable, cmd = m.appsTable.Update(msg)
+			m.appsPage.Table, cmd = m.appsPage.Table.Update(msg)
 		case modeRevs:
-			m.revisionsTable, cmd = m.revisionsTable.Update(msg)
+			m.revisionsPage.Table, cmd = m.revisionsPage.Table.Update(msg)
 		case modeContainers:
-			m.containersTable, cmd = m.containersTable.Update(msg)
+			m.containersPage.Table, cmd = m.containersPage.Table.Update(msg)
 		case modeEnvVars:
-			m.envVarsTable, cmd = m.envVarsTable.Update(msg)
+			m.envVarsPage.Table, cmd = m.envVarsPage.Table.Update(msg)
 		case modeResourceGroups:
-			m.resourceGroupsTable, cmd = m.resourceGroupsTable.Update(msg)
+			m.resourceGroupsPage.Table, cmd = m.resourceGroupsPage.Table.Update(msg)
 		}
 
 		if cmd != nil {
@@ -120,13 +120,4 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	return m, nil
-}
-
-// isAnyFilterActive checks if any filter input is currently focused
-func (m model) isAnyFilterActive() bool {
-	return m.appsFilterInput.Focused() ||
-		m.revisionsFilterInput.Focused() ||
-		m.containersFilterInput.Focused() ||
-		m.envVarsFilterInput.Focused() ||
-		m.resourceGroupsFilterInput.Focused()
 }

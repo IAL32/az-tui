@@ -50,6 +50,46 @@ type ConfirmDialog struct {
 	OnNo    func(m model) (model, tea.Cmd) // executed if user presses no/cancel
 }
 
+// Page Model Structures - Hierarchical State Management
+type ResourceGroupsPageModel struct {
+	Data        []models.ResourceGroup
+	Table       table.Model
+	FilterInput textinput.Model
+	IsLoading   bool
+	Error       error
+}
+
+type AppsPageModel struct {
+	Data        []models.ContainerApp
+	Table       table.Model
+	FilterInput textinput.Model
+	IsLoading   bool
+	Error       error
+}
+
+type RevisionsPageModel struct {
+	Data        []models.Revision
+	Table       table.Model
+	FilterInput textinput.Model
+	IsLoading   bool
+	Error       error
+}
+
+type ContainersPageModel struct {
+	Data        []models.Container
+	Table       table.Model
+	FilterInput textinput.Model
+	IsLoading   bool
+	Error       error
+}
+
+type EnvVarsPageModel struct {
+	Table       table.Model
+	FilterInput textinput.Model
+	IsLoading   bool
+	Error       error
+}
+
 // Key bindings for different modes
 type keyMap struct {
 	// Navigation
@@ -104,62 +144,43 @@ func (k keyMap) ContextHelp() [][]key.Binding {
 }
 
 type model struct {
-	// Context management (NEW)
+	// Global state - Context management
 	context         contextType // Current active context
 	contextList     list.Model  // List component for context selection
 	showContextList bool        // Whether context list is visible
 
-	// Pure data - no UI components
-	apps           []models.ContainerApp
-	revs           []models.Revision
-	ctrs           []models.Container
-	resourceGroups []models.ResourceGroup
+	// Page Models - Hierarchical State Management
+	resourceGroupsPage ResourceGroupsPageModel
+	appsPage           AppsPageModel
+	revisionsPage      RevisionsPageModel
+	containersPage     ContainersPageModel
+	envVarsPage        EnvVarsPageModel
 
-	// Table components for each mode
-	appsTable           table.Model
-	revisionsTable      table.Model
-	containersTable     table.Model
-	envVarsTable        table.Model
-	resourceGroupsTable table.Model
-
-	// Filter text inputs for each mode
-	appsFilterInput           textinput.Model
-	revisionsFilterInput      textinput.Model
-	containersFilterInput     textinput.Model
-	envVarsFilterInput        textinput.Model
-	resourceGroupsFilterInput textinput.Model
-
-	// Help system
-	help help.Model
-	keys keyMap
-
-	// Loading spinner
+	// Global UI components
+	help    help.Model
+	keys    keyMap
 	spinner spinner.Model
 
-	// Context for navigation
+	// Global navigation context
+	currentRG            string // Current resource group
 	currentAppID         string // When viewing revisions
 	currentRevName       string // When viewing containers
 	currentContainerName string // When viewing environment variables
 
-	// Optional caches for performance
+	// Performance cache (shared across pages)
 	containersByRev map[string][]models.Container // key: revKey(appID, revName)
 
-	// App state
-	mode    mode
-	loading bool
-	err     error
+	// Global app state
+	mode mode
 
-	// Configuration
-	rg string
-
-	// Terminal size for component sizing
+	// Terminal dimensions (global)
 	termW, termH int
 
-	// Status and confirmation
+	// Global status and confirmation
 	statusLine string
 	confirm    ConfirmDialog
 
-	// Data and command providers
+	// Shared providers
 	dataProvider    providers.DataProvider
 	commandProvider providers.CommandProvider
 }
@@ -183,40 +204,31 @@ func InitialModel(useMockMode bool) model {
 	}
 
 	m := model{
-		// Context management (NEW)
+		// Global state - Context management
 		context:         contextApps, // Default to apps
 		showContextList: false,
 
-		// Pure data
-		apps:           nil,
-		revs:           nil,
-		ctrs:           nil,
-		resourceGroups: nil,
+		// Global navigation context
+		currentRG:            os.Getenv("ACA_RG"),
+		currentAppID:         "",
+		currentRevName:       "",
+		currentContainerName: "",
 
-		// Context for navigation
-		currentAppID:   "",
-		currentRevName: "",
-
-		// Caches
+		// Performance cache (shared across pages)
 		containersByRev: make(map[string][]models.Container),
 
-		// App state
-		mode:    modeResourceGroups, // Start with resource groups mode
-		loading: true,
-		err:     nil,
+		// Global app state
+		mode: modeResourceGroups, // Start with resource groups mode
 
-		// Configuration
-		rg: os.Getenv("ACA_RG"),
-
-		// Terminal size (will be set on first WindowSizeMsg)
+		// Terminal dimensions (global)
 		termW: 80,
 		termH: 24,
 
-		// Status
+		// Global status and confirmation
 		statusLine: "",
 		confirm:    ConfirmDialog{},
 
-		// Data and command providers
+		// Shared providers
 		dataProvider:    dataProvider,
 		commandProvider: createCommandProvider(useMockMode),
 	}
@@ -224,26 +236,47 @@ func InitialModel(useMockMode bool) model {
 	// Initialize context list using the dedicated method
 	m.contextList = m.createContextList()
 
-	// Initialize empty tables
-	m.appsTable = m.createAppsTable()
-	m.revisionsTable = m.createRevisionsTable()
-	m.containersTable = m.createContainersTable()
-	m.envVarsTable = m.createEnvVarsTable()
-	m.resourceGroupsTable = m.createResourceGroupsTable()
+	// Initialize page models with their components
+	m.resourceGroupsPage = ResourceGroupsPageModel{
+		Data:        nil,
+		Table:       m.createResourceGroupsTable(),
+		FilterInput: createFilterInput("Filter resource groups..."),
+		IsLoading:   true,
+		Error:       nil,
+	}
 
-	// Initialize filter text inputs
-	m.appsFilterInput = textinput.New()
-	m.appsFilterInput.Placeholder = "Filter apps..."
-	m.revisionsFilterInput = textinput.New()
-	m.revisionsFilterInput.Placeholder = "Filter revisions..."
-	m.containersFilterInput = textinput.New()
-	m.containersFilterInput.Placeholder = "Filter containers..."
-	m.envVarsFilterInput = textinput.New()
-	m.envVarsFilterInput.Placeholder = "Filter environment variables..."
-	m.resourceGroupsFilterInput = textinput.New()
-	m.resourceGroupsFilterInput.Placeholder = "Filter resource groups..."
+	m.appsPage = AppsPageModel{
+		Data:        nil,
+		Table:       m.createAppsTable(),
+		FilterInput: createFilterInput("Filter apps..."),
+		IsLoading:   false,
+		Error:       nil,
+	}
 
-	// Initialize help system
+	m.revisionsPage = RevisionsPageModel{
+		Data:        nil,
+		Table:       m.createRevisionsTable(),
+		FilterInput: createFilterInput("Filter revisions..."),
+		IsLoading:   false,
+		Error:       nil,
+	}
+
+	m.containersPage = ContainersPageModel{
+		Data:        nil,
+		Table:       m.createContainersTable(),
+		FilterInput: createFilterInput("Filter containers..."),
+		IsLoading:   false,
+		Error:       nil,
+	}
+
+	m.envVarsPage = EnvVarsPageModel{
+		Table:       m.createEnvVarsTable(),
+		FilterInput: createFilterInput("Filter environment variables..."),
+		IsLoading:   false,
+		Error:       nil,
+	}
+
+	// Initialize global UI components
 	m.help = help.New()
 
 	// Initialize spinner
@@ -333,6 +366,13 @@ func InitialModel(useMockMode bool) model {
 	return m
 }
 
+// Helper function to create filter input with placeholder
+func createFilterInput(placeholder string) textinput.Model {
+	input := textinput.New()
+	input.Placeholder = placeholder
+	return input
+}
+
 func (m model) Init() tea.Cmd {
 	return tea.Batch(LoadResourceGroupsCmd(m.dataProvider), m.spinner.Tick)
 }
@@ -355,12 +395,12 @@ func revKey(appID, rev string) string {
 }
 
 func (m model) currentApp() (models.ContainerApp, bool) {
-	if len(m.apps) == 0 {
+	if len(m.appsPage.Data) == 0 {
 		return models.ContainerApp{}, false
 	}
 
 	// Get selected app from table
-	selectedRow := m.appsTable.HighlightedRow()
+	selectedRow := m.appsPage.Table.HighlightedRow()
 	if selectedRow.Data == nil {
 		return models.ContainerApp{}, false
 	}
@@ -371,7 +411,7 @@ func (m model) currentApp() (models.ContainerApp, bool) {
 	}
 
 	// Find the app by name
-	for _, app := range m.apps {
+	for _, app := range m.appsPage.Data {
 		if app.Name == appName {
 			return app, true
 		}

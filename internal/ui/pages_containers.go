@@ -26,7 +26,7 @@ func (m model) createContainersTable() table.Model {
 		AddColumn(columnKeyCtrVolumes, "Volumes", 10, false)      // Fixed width
 
 	// Update dynamic column widths based on actual content
-	for _, ctr := range m.ctrs {
+	for _, ctr := range m.containersPage.Data {
 		builder.UpdateWidthFromString(columnKeyCtrName, ctr.Name)
 	}
 
@@ -34,9 +34,9 @@ func (m model) createContainersTable() table.Model {
 	columns := builder.Build()
 
 	var rows []table.Row
-	if len(m.ctrs) > 0 {
-		rows = make([]table.Row, len(m.ctrs))
-		for i, ctr := range m.ctrs {
+	if len(m.containersPage.Data) > 0 {
+		rows = make([]table.Row, len(m.containersPage.Data))
+		for i, ctr := range m.containersPage.Data {
 			command := strings.Join(ctr.Command, " ")
 			if command == "" {
 				command = "-"
@@ -100,7 +100,7 @@ func (m model) createContainersTable() table.Model {
 		}
 	}
 
-	return m.createUnifiedTable(columns, rows, m.containersFilterInput)
+	return m.createUnifiedTable(columns, rows, m.containersPage.FilterInput)
 }
 
 // getContainersHelpKeys returns the key bindings for containers mode
@@ -125,25 +125,26 @@ func (m *model) leaveContainers() {
 	m.currentRevName = ""
 
 	// Clear containers state
-	m.ctrs = nil
-	m.containersTable = m.createContainersTable()
+	m.containersPage.Data = nil
+	m.containersPage.Table = m.createContainersTable()
 }
 
 // Message handlers
 func (m model) handleLoadedContainersMsg(msg loadedContainersMsg) (model, tea.Cmd) {
+	m.containersPage.IsLoading = false
+	m.containersPage.Error = msg.err
+
 	if msg.err != nil {
-		m.ctrs = nil
+		m.containersPage.Data = nil
 		return m, nil
 	}
 
 	// cache
 	m.containersByRev[revKey(msg.appID, msg.revName)] = msg.ctrs
-	m.ctrs = msg.ctrs
+	m.containersPage.Data = msg.ctrs
 
 	// Create the containers table with the loaded data
-	if len(m.ctrs) > 0 {
-		m.containersTable = m.createContainersTable()
-	}
+	m.containersPage.Table = m.createContainersTable()
 
 	return m, nil
 }
@@ -151,22 +152,22 @@ func (m model) handleLoadedContainersMsg(msg loadedContainersMsg) (model, tea.Cm
 // Key handlers
 func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	// Handle filter input when focused
-	if m.containersFilterInput.Focused() {
+	if m.containersPage.FilterInput.Focused() {
 		switch msg.String() {
 		case "enter":
-			m.containersFilterInput.Blur()
+			m.containersPage.FilterInput.Blur()
 			// Sync the filter with the table after applying
-			m.containersTable = m.containersTable.WithFilterInput(m.containersFilterInput)
+			m.containersPage.Table = m.containersPage.Table.WithFilterInput(m.containersPage.FilterInput)
 			return m, nil, true
 		case "esc":
-			m.containersFilterInput.SetValue("")
-			m.containersFilterInput.Blur()
-			m.containersTable = m.containersTable.WithFilterInput(m.containersFilterInput)
+			m.containersPage.FilterInput.SetValue("")
+			m.containersPage.FilterInput.Blur()
+			m.containersPage.Table = m.containersPage.Table.WithFilterInput(m.containersPage.FilterInput)
 			return m, nil, true
 		default:
 			var cmd tea.Cmd
-			m.containersFilterInput, cmd = m.containersFilterInput.Update(msg)
-			m.containersTable = m.containersTable.WithFilterInput(m.containersFilterInput)
+			m.containersPage.FilterInput, cmd = m.containersPage.FilterInput.Update(msg)
+			m.containersPage.Table = m.containersPage.Table.WithFilterInput(m.containersPage.FilterInput)
 			return m, cmd, true
 		}
 	}
@@ -178,9 +179,9 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
-		m.containersFilterInput.SetValue("") // Clear any existing value
-		m.containersFilterInput.Focus()
-		m.containersTable = m.containersTable.WithFilterInput(m.containersFilterInput)
+		m.containersPage.FilterInput.SetValue("") // Clear any existing value
+		m.containersPage.FilterInput.Focus()
+		m.containersPage.Table = m.containersPage.Table.WithFilterInput(m.containersPage.FilterInput)
 		return m, nil, true
 	case "r":
 		// Refresh containers list - clear data and show loading state
@@ -188,16 +189,18 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		if a.Name == "" || m.currentRevName == "" {
 			return m, nil, true
 		}
-		m.ctrs = nil
-		m.containersTable = m.createContainersTable()
+		m.containersPage.IsLoading = true
+		m.containersPage.Error = nil
+		m.containersPage.Data = nil
+		m.containersPage.Table = m.createContainersTable()
 		return m, LoadContainersCmd(m.dataProvider, a, m.currentRevName), true
 	case "s":
-		if len(m.ctrs) == 0 {
+		if len(m.containersPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected container from table
-		selectedRow := m.containersTable.HighlightedRow()
+		selectedRow := m.containersPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -210,7 +213,7 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the container by name
 		var selectedContainer models.Container
 		found := false
-		for _, ctr := range m.ctrs {
+		for _, ctr := range m.containersPage.Data {
 			if ctr.Name == containerName {
 				selectedContainer = ctr
 				found = true
@@ -230,12 +233,12 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		return m, m.commandProvider.ExecIntoContainer(a, m.currentRevName, selectedContainer.Name), true
 
 	case "l":
-		if len(m.ctrs) == 0 {
+		if len(m.containersPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected container from table
-		selectedRow := m.containersTable.HighlightedRow()
+		selectedRow := m.containersPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -248,7 +251,7 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the container by name
 		var selectedContainer models.Container
 		found := false
-		for _, ctr := range m.ctrs {
+		for _, ctr := range m.containersPage.Data {
 			if ctr.Name == containerName {
 				selectedContainer = ctr
 				found = true
@@ -268,12 +271,12 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		return m, m.commandProvider.ShowContainerLogs(a, m.currentRevName, selectedContainer.Name), true
 
 	case "v":
-		if len(m.ctrs) == 0 {
+		if len(m.containersPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected container from table
-		selectedRow := m.containersTable.HighlightedRow()
+		selectedRow := m.containersPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -286,7 +289,7 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the container by name
 		var selectedContainer models.Container
 		found := false
-		for _, ctr := range m.ctrs {
+		for _, ctr := range m.containersPage.Data {
 			if ctr.Name == containerName {
 				selectedContainer = ctr
 				found = true
@@ -301,7 +304,7 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Enter environment variables mode
 		m.mode = modeEnvVars
 		m.currentContainerName = selectedContainer.Name
-		m.envVarsTable = m.createEnvVarsTable()
+		m.envVarsPage.Table = m.createEnvVarsTable()
 		return m, nil, true
 
 	case "esc":
@@ -314,17 +317,17 @@ func (m model) handleContainersKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewContainers() string {
-	if len(m.ctrs) == 0 && m.err == nil {
+	if len(m.containersPage.Data) == 0 && m.containersPage.Error == nil {
 		// Show loading state using generalized layout
 		return m.createLoadingLayout("Loading containers...")
 	}
 
-	if m.err != nil && len(m.ctrs) == 0 {
+	if m.containersPage.Error != nil && len(m.containersPage.Data) == 0 {
 		// Show error state using generalized layout
-		return m.createErrorLayout(m.err.Error(), "[esc] back  [q] quit")
+		return m.createErrorLayout(m.containersPage.Error.Error(), "[esc] back  [q] quit")
 	}
 
 	// Show table view using generalized layout
-	tableView := m.containersTable.View()
+	tableView := m.containersPage.Table.View()
 	return m.createTableLayout(tableView)
 }

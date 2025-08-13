@@ -27,7 +27,7 @@ func (m model) createRevisionsTable() table.Model {
 		AddColumn(columnKeyRevFQDN, "FQDN", 60, false)            // Fixed width (longest content)
 
 	// Update dynamic column widths based on actual content
-	for _, rev := range m.revs {
+	for _, rev := range m.revisionsPage.Data {
 		builder.UpdateWidthFromString(columnKeyRevName, rev.Name)
 	}
 
@@ -35,9 +35,9 @@ func (m model) createRevisionsTable() table.Model {
 	columns := builder.Build()
 
 	var rows []table.Row
-	if len(m.revs) > 0 {
-		rows = make([]table.Row, len(m.revs))
-		for i, rev := range m.revs {
+	if len(m.revisionsPage.Data) > 0 {
+		rows = make([]table.Row, len(m.revisionsPage.Data))
+		for i, rev := range m.revisionsPage.Data {
 			activeMark := "❌"
 			if rev.Active {
 				activeMark = "✅"
@@ -127,7 +127,7 @@ func (m model) createRevisionsTable() table.Model {
 	}
 
 	return m.
-		createUnifiedTable(columns, rows, m.revisionsFilterInput).
+		createUnifiedTable(columns, rows, m.revisionsPage.FilterInput).
 		SortByDesc(columnKeyRevTraffic)
 }
 
@@ -151,6 +151,12 @@ func (m *model) enterRevsFor(a models.ContainerApp) tea.Cmd {
 	m.mode = modeRevs
 	m.currentAppID = appID(a)
 
+	// Set loading state for revisions page
+	m.revisionsPage.IsLoading = true
+	m.revisionsPage.Error = nil
+	m.revisionsPage.Data = nil
+	m.revisionsPage.Table = m.createRevisionsTable()
+
 	return LoadRevsCmd(m.dataProvider, a)
 }
 
@@ -159,24 +165,23 @@ func (m *model) leaveRevs() {
 	m.currentAppID = ""
 
 	// Clear revisions state
-	m.revs = nil
-	m.revisionsTable = m.createRevisionsTable()
+	m.revisionsPage.Data = nil
+	m.revisionsPage.Table = m.createRevisionsTable()
 }
 
 // Message handlers
 func (m model) handleLoadedRevsMsg(msg loadedRevsMsg) (model, tea.Cmd) {
-	m.err = msg.err
+	m.revisionsPage.IsLoading = false
+	m.revisionsPage.Error = msg.err
 
 	if msg.err != nil {
-		m.revs = nil
+		m.revisionsPage.Data = nil
 		return m, nil
 	}
 
-	m.revs = msg.revs
+	m.revisionsPage.Data = msg.revs
 	// Update the revisions table with new data
-	if len(m.revs) > 0 {
-		m.revisionsTable = m.createRevisionsTable()
-	}
+	m.revisionsPage.Table = m.createRevisionsTable()
 
 	return m, nil
 }
@@ -198,22 +203,22 @@ func (m model) handleRevisionRestartedMsg(msg revisionRestartedMsg) (model, tea.
 // Key handlers
 func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	// Handle filter input when focused
-	if m.revisionsFilterInput.Focused() {
+	if m.revisionsPage.FilterInput.Focused() {
 		switch msg.String() {
 		case "enter":
-			m.revisionsFilterInput.Blur()
+			m.revisionsPage.FilterInput.Blur()
 			// Sync the filter with the table after applying
-			m.revisionsTable = m.revisionsTable.WithFilterInput(m.revisionsFilterInput)
+			m.revisionsPage.Table = m.revisionsPage.Table.WithFilterInput(m.revisionsPage.FilterInput)
 			return m, nil, true
 		case "esc":
-			m.revisionsFilterInput.SetValue("")
-			m.revisionsFilterInput.Blur()
-			m.revisionsTable = m.revisionsTable.WithFilterInput(m.revisionsFilterInput)
+			m.revisionsPage.FilterInput.SetValue("")
+			m.revisionsPage.FilterInput.Blur()
+			m.revisionsPage.Table = m.revisionsPage.Table.WithFilterInput(m.revisionsPage.FilterInput)
 			return m, nil, true
 		default:
 			var cmd tea.Cmd
-			m.revisionsFilterInput, cmd = m.revisionsFilterInput.Update(msg)
-			m.revisionsTable = m.revisionsTable.WithFilterInput(m.revisionsFilterInput)
+			m.revisionsPage.FilterInput, cmd = m.revisionsPage.FilterInput.Update(msg)
+			m.revisionsPage.Table = m.revisionsPage.Table.WithFilterInput(m.revisionsPage.FilterInput)
 			return m, cmd, true
 		}
 	}
@@ -225,17 +230,17 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
-		m.revisionsFilterInput.SetValue("") // Clear any existing value
-		m.revisionsFilterInput.Focus()
-		m.revisionsTable = m.revisionsTable.WithFilterInput(m.revisionsFilterInput)
+		m.revisionsPage.FilterInput.SetValue("") // Clear any existing value
+		m.revisionsPage.FilterInput.Focus()
+		m.revisionsPage.Table = m.revisionsPage.Table.WithFilterInput(m.revisionsPage.FilterInput)
 		return m, nil, true
 	case "enter":
-		if len(m.revs) == 0 {
+		if len(m.revisionsPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected revision from table
-		selectedRow := m.revisionsTable.HighlightedRow()
+		selectedRow := m.revisionsPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -248,7 +253,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the revision by name
 		var selectedRev models.Revision
 		found := false
-		for _, rev := range m.revs {
+		for _, rev := range m.revisionsPage.Data {
 			if rev.Name == revName {
 				selectedRev = rev
 				found = true
@@ -268,8 +273,11 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.mode = modeContainers
 		m.currentRevName = selectedRev.Name
 
-		// Clear containers and load new ones
-		m.ctrs = nil
+		// Set loading state and clear containers data
+		m.containersPage.IsLoading = true
+		m.containersPage.Error = nil
+		m.containersPage.Data = nil
+		m.containersPage.Table = m.createContainersTable()
 		return m, LoadContainersCmd(m.dataProvider, a, selectedRev.Name), true
 
 	case "r":
@@ -278,17 +286,19 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		if a.Name == "" {
 			return m, nil, true
 		}
-		m.revs = nil
-		m.revisionsTable = m.createRevisionsTable()
+		m.revisionsPage.IsLoading = true
+		m.revisionsPage.Error = nil
+		m.revisionsPage.Data = nil
+		m.revisionsPage.Table = m.createRevisionsTable()
 		return m, LoadRevsCmd(m.dataProvider, a), true
 
 	case "R":
-		if len(m.revs) == 0 {
+		if len(m.revisionsPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected revision from table
-		selectedRow := m.revisionsTable.HighlightedRow()
+		selectedRow := m.revisionsPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -301,7 +311,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the revision by name
 		var selectedRev models.Revision
 		found := false
-		for _, rev := range m.revs {
+		for _, rev := range m.revisionsPage.Data {
 			if rev.Name == revName {
 				selectedRev = rev
 				found = true
@@ -318,8 +328,8 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 			return m, nil, true
 		}
 
-		containerNames := make([]string, 0, len(m.ctrs))
-		for _, c := range m.ctrs {
+		containerNames := make([]string, 0, len(m.containersPage.Data))
+		for _, c := range m.containersPage.Data {
 			containerNames = append(containerNames, c.Name)
 		}
 
@@ -337,12 +347,12 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		return m, nil, true
 
 	case "s":
-		if len(m.revs) == 0 {
+		if len(m.revisionsPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected revision from table
-		selectedRow := m.revisionsTable.HighlightedRow()
+		selectedRow := m.revisionsPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -355,7 +365,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the revision by name
 		var selectedRev models.Revision
 		found := false
-		for _, rev := range m.revs {
+		for _, rev := range m.revisionsPage.Data {
 			if rev.Name == revName {
 				selectedRev = rev
 				found = true
@@ -375,12 +385,12 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		return m, m.commandProvider.ExecIntoRevision(a, selectedRev.Name), true
 
 	case "l":
-		if len(m.revs) == 0 {
+		if len(m.revisionsPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected revision from table
-		selectedRow := m.revisionsTable.HighlightedRow()
+		selectedRow := m.revisionsPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -393,7 +403,7 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the revision by name
 		var selectedRev models.Revision
 		found := false
-		for _, rev := range m.revs {
+		for _, rev := range m.revisionsPage.Data {
 			if rev.Name == revName {
 				selectedRev = rev
 				found = true
@@ -422,17 +432,17 @@ func (m model) handleRevsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewRevs() string {
-	if len(m.revs) == 0 && m.err == nil {
+	if len(m.revisionsPage.Data) == 0 && m.revisionsPage.Error == nil {
 		// Show loading state using generalized layout
 		return m.createLoadingLayout("Loading revisions...")
 	}
 
-	if m.err != nil && len(m.revs) == 0 {
+	if m.revisionsPage.Error != nil && len(m.revisionsPage.Data) == 0 {
 		// Show error state using generalized layout
-		return m.createErrorLayout(m.err.Error(), "[esc] back  [q] quit")
+		return m.createErrorLayout(m.revisionsPage.Error.Error(), "[esc] back  [q] quit")
 	}
 
 	// Show table view using generalized layout
-	tableView := m.revisionsTable.View()
+	tableView := m.revisionsPage.Table.View()
 	return m.createTableLayout(tableView)
 }

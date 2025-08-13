@@ -86,7 +86,7 @@ func (m model) createResourceGroupsTable() table.Model {
 		AddColumn(columnKeyRGTags, "Tags", 80, false)         // Fixed width - much larger for tags
 
 	// Update dynamic column widths based on actual content
-	for _, rg := range m.resourceGroups {
+	for _, rg := range m.resourceGroupsPage.Data {
 		builder.UpdateWidthFromString(columnKeyRGName, rg.Name)
 	}
 
@@ -94,9 +94,9 @@ func (m model) createResourceGroupsTable() table.Model {
 	columns := builder.Build()
 
 	var rows []table.Row
-	if len(m.resourceGroups) > 0 {
-		rows = make([]table.Row, len(m.resourceGroups))
-		for i, rg := range m.resourceGroups {
+	if len(m.resourceGroupsPage.Data) > 0 {
+		rows = make([]table.Row, len(m.resourceGroupsPage.Data))
+		for i, rg := range m.resourceGroupsPage.Data {
 			state := rg.State
 			if state == "" {
 				state = "Unknown"
@@ -115,7 +115,7 @@ func (m model) createResourceGroupsTable() table.Model {
 	// Don't show any placeholder rows - empty table is fine
 
 	return m.
-		createUnifiedTable(columns, rows, m.resourceGroupsFilterInput).
+		createUnifiedTable(columns, rows, m.resourceGroupsPage.FilterInput).
 		SortByAsc(columnKeyRGName)
 }
 
@@ -134,19 +134,16 @@ func (m model) getResourceGroupsHelpKeys() keyMap {
 
 // Message handlers
 func (m model) handleLoadedResourceGroupsMsg(msg loadedResourceGroupsMsg) (model, tea.Cmd) {
-	m.loading = false
-	m.err = msg.err
+	m.resourceGroupsPage.IsLoading = false
+	m.resourceGroupsPage.Error = msg.err
 	if msg.err != nil {
+		m.resourceGroupsPage.Data = nil
 		return m, nil
 	}
-	m.resourceGroups = msg.resourceGroups
-
-	if len(m.resourceGroups) == 0 {
-		return m, nil
-	}
+	m.resourceGroupsPage.Data = msg.resourceGroups
 
 	// Create the resource groups table with the loaded data
-	m.resourceGroupsTable = m.createResourceGroupsTable()
+	m.resourceGroupsPage.Table = m.createResourceGroupsTable()
 
 	return m, nil
 }
@@ -154,22 +151,22 @@ func (m model) handleLoadedResourceGroupsMsg(msg loadedResourceGroupsMsg) (model
 // Key handlers
 func (m model) handleResourceGroupsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	// Handle filter input when focused
-	if m.resourceGroupsFilterInput.Focused() {
+	if m.resourceGroupsPage.FilterInput.Focused() {
 		switch msg.String() {
 		case "enter":
-			m.resourceGroupsFilterInput.Blur()
+			m.resourceGroupsPage.FilterInput.Blur()
 			// Sync the filter with the table after applying
-			m.resourceGroupsTable = m.resourceGroupsTable.WithFilterInput(m.resourceGroupsFilterInput)
+			m.resourceGroupsPage.Table = m.resourceGroupsPage.Table.WithFilterInput(m.resourceGroupsPage.FilterInput)
 			return m, nil, true
 		case "esc":
-			m.resourceGroupsFilterInput.SetValue("")
-			m.resourceGroupsFilterInput.Blur()
-			m.resourceGroupsTable = m.resourceGroupsTable.WithFilterInput(m.resourceGroupsFilterInput)
+			m.resourceGroupsPage.FilterInput.SetValue("")
+			m.resourceGroupsPage.FilterInput.Blur()
+			m.resourceGroupsPage.Table = m.resourceGroupsPage.Table.WithFilterInput(m.resourceGroupsPage.FilterInput)
 			return m, nil, true
 		default:
 			var cmd tea.Cmd
-			m.resourceGroupsFilterInput, cmd = m.resourceGroupsFilterInput.Update(msg)
-			m.resourceGroupsTable = m.resourceGroupsTable.WithFilterInput(m.resourceGroupsFilterInput)
+			m.resourceGroupsPage.FilterInput, cmd = m.resourceGroupsPage.FilterInput.Update(msg)
+			m.resourceGroupsPage.Table = m.resourceGroupsPage.Table.WithFilterInput(m.resourceGroupsPage.FilterInput)
 			return m, cmd, true
 		}
 	}
@@ -181,17 +178,17 @@ func (m model) handleResourceGroupsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
-		m.resourceGroupsFilterInput.SetValue("") // Clear any existing value
-		m.resourceGroupsFilterInput.Focus()
-		m.resourceGroupsTable = m.resourceGroupsTable.WithFilterInput(m.resourceGroupsFilterInput)
+		m.resourceGroupsPage.FilterInput.SetValue("") // Clear any existing value
+		m.resourceGroupsPage.FilterInput.Focus()
+		m.resourceGroupsPage.Table = m.resourceGroupsPage.Table.WithFilterInput(m.resourceGroupsPage.FilterInput)
 		return m, nil, true
 	case "enter":
-		if len(m.resourceGroups) == 0 {
+		if len(m.resourceGroupsPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected resource group from table
-		selectedRow := m.resourceGroupsTable.HighlightedRow()
+		selectedRow := m.resourceGroupsPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -204,7 +201,7 @@ func (m model) handleResourceGroupsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the resource group by name
 		var selectedRG models.ResourceGroup
 		found := false
-		for _, rg := range m.resourceGroups {
+		for _, rg := range m.resourceGroupsPage.Data {
 			if rg.Name == rgName {
 				selectedRG = rg
 				found = true
@@ -218,17 +215,19 @@ func (m model) handleResourceGroupsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 		// Navigate to apps for this resource group
 		m.mode = modeApps
-		m.rg = selectedRG.Name
-		m.loading = true
-		m.apps = nil
-		m.appsTable = m.createAppsTable()
-		return m, LoadAppsCmd(m.dataProvider, m.rg), true
+		m.currentRG = selectedRG.Name
+		m.appsPage.IsLoading = true
+		m.appsPage.Error = nil
+		m.appsPage.Data = nil
+		m.appsPage.Table = m.createAppsTable()
+		return m, LoadAppsCmd(m.dataProvider, m.currentRG), true
 
 	case "r":
 		// Refresh resource groups list - clear data and show loading state
-		m.loading = true
-		m.resourceGroups = nil
-		m.resourceGroupsTable = m.createResourceGroupsTable()
+		m.resourceGroupsPage.IsLoading = true
+		m.resourceGroupsPage.Error = nil
+		m.resourceGroupsPage.Data = nil
+		m.resourceGroupsPage.Table = m.createResourceGroupsTable()
 		return m, LoadResourceGroupsCmd(m.dataProvider), true
 	}
 
@@ -237,17 +236,17 @@ func (m model) handleResourceGroupsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewResourceGroups() string {
-	if m.loading && len(m.resourceGroups) == 0 {
+	if m.resourceGroupsPage.IsLoading && len(m.resourceGroupsPage.Data) == 0 {
 		// Show loading state using generalized layout
 		return m.createLoadingLayout("Loading resource groups...")
 	}
 
-	if m.err != nil && len(m.resourceGroups) == 0 {
+	if m.resourceGroupsPage.Error != nil && len(m.resourceGroupsPage.Data) == 0 {
 		// Show error state using generalized layout
-		return m.createErrorLayout(m.err.Error(), "Press r to retry or q to quit.")
+		return m.createErrorLayout(m.resourceGroupsPage.Error.Error(), "Press r to retry or q to quit.")
 	}
 
 	// Show table view using generalized layout
-	tableView := m.resourceGroupsTable.View()
+	tableView := m.resourceGroupsPage.Table.View()
 	return m.createTableLayout(tableView)
 }

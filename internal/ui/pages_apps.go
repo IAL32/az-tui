@@ -26,7 +26,7 @@ func (m model) createAppsTable() table.Model {
 		AddColumn(columnKeyAppFQDN, "FQDN", 60, false)                 // Fixed width (longest content)
 
 	// Update dynamic column widths based on actual content
-	for _, app := range m.apps {
+	for _, app := range m.appsPage.Data {
 		builder.UpdateWidthFromString(columnKeyAppName, app.Name)
 	}
 
@@ -34,9 +34,9 @@ func (m model) createAppsTable() table.Model {
 	columns := builder.Build()
 
 	var rows []table.Row
-	if len(m.apps) > 0 {
-		rows = make([]table.Row, len(m.apps))
-		for i, app := range m.apps {
+	if len(m.appsPage.Data) > 0 {
+		rows = make([]table.Row, len(m.appsPage.Data))
+		for i, app := range m.appsPage.Data {
 			fqdn := app.IngressFQDN
 			if fqdn == "" {
 				fqdn = "-"
@@ -103,7 +103,7 @@ func (m model) createAppsTable() table.Model {
 	}
 	// Don't show any placeholder rows - empty table is fine
 
-	return m.createUnifiedTable(columns, rows, m.appsFilterInput)
+	return m.createUnifiedTable(columns, rows, m.appsPage.FilterInput)
 }
 
 // getAppsHelpKeys returns the key bindings for apps mode
@@ -122,19 +122,16 @@ func (m model) getAppsHelpKeys() keyMap {
 
 // Message handlers
 func (m model) handleLoadedAppsMsg(msg loadedAppsMsg) (model, tea.Cmd) {
-	m.loading = false
-	m.err = msg.err
+	m.appsPage.IsLoading = false
+	m.appsPage.Error = msg.err
 	if msg.err != nil {
+		m.appsPage.Data = nil
 		return m, nil
 	}
-	m.apps = msg.apps
-
-	if len(m.apps) == 0 {
-		return m, nil
-	}
+	m.appsPage.Data = msg.apps
 
 	// Create the apps table with the loaded data
-	m.appsTable = m.createAppsTable()
+	m.appsPage.Table = m.createAppsTable()
 
 	return m, nil
 }
@@ -142,22 +139,22 @@ func (m model) handleLoadedAppsMsg(msg loadedAppsMsg) (model, tea.Cmd) {
 // Key handlers
 func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	// Handle filter input when focused
-	if m.appsFilterInput.Focused() {
+	if m.appsPage.FilterInput.Focused() {
 		switch msg.String() {
 		case "enter":
-			m.appsFilterInput.Blur()
+			m.appsPage.FilterInput.Blur()
 			// Sync the filter with the table after applying
-			m.appsTable = m.appsTable.WithFilterInput(m.appsFilterInput)
+			m.appsPage.Table = m.appsPage.Table.WithFilterInput(m.appsPage.FilterInput)
 			return m, nil, true
 		case "esc":
-			m.appsFilterInput.SetValue("")
-			m.appsFilterInput.Blur()
-			m.appsTable = m.appsTable.WithFilterInput(m.appsFilterInput)
+			m.appsPage.FilterInput.SetValue("")
+			m.appsPage.FilterInput.Blur()
+			m.appsPage.Table = m.appsPage.Table.WithFilterInput(m.appsPage.FilterInput)
 			return m, nil, true
 		default:
 			var cmd tea.Cmd
-			m.appsFilterInput, cmd = m.appsFilterInput.Update(msg)
-			m.appsTable = m.appsTable.WithFilterInput(m.appsFilterInput)
+			m.appsPage.FilterInput, cmd = m.appsPage.FilterInput.Update(msg)
+			m.appsPage.Table = m.appsPage.Table.WithFilterInput(m.appsPage.FilterInput)
 			return m, cmd, true
 		}
 	}
@@ -169,17 +166,17 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil, true
 	case "/":
-		m.appsFilterInput.SetValue("") // Clear any existing value
-		m.appsFilterInput.Focus()
-		m.appsTable = m.appsTable.WithFilterInput(m.appsFilterInput)
+		m.appsPage.FilterInput.SetValue("") // Clear any existing value
+		m.appsPage.FilterInput.Focus()
+		m.appsPage.Table = m.appsPage.Table.WithFilterInput(m.appsPage.FilterInput)
 		return m, nil, true
 	case "enter":
-		if len(m.apps) == 0 {
+		if len(m.appsPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected app from table
-		selectedRow := m.appsTable.HighlightedRow()
+		selectedRow := m.appsPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -192,7 +189,7 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the app by name
 		var selectedApp models.ContainerApp
 		found := false
-		for _, app := range m.apps {
+		for _, app := range m.appsPage.Data {
 			if app.Name == appName {
 				selectedApp = app
 				found = true
@@ -208,18 +205,19 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 	case "r":
 		// Refresh apps list - clear data and show loading state
-		m.loading = true
-		m.apps = nil
-		m.appsTable = m.createAppsTable()
-		return m, LoadAppsCmd(m.dataProvider, m.rg), true
+		m.appsPage.IsLoading = true
+		m.appsPage.Error = nil
+		m.appsPage.Data = nil
+		m.appsPage.Table = m.createAppsTable()
+		return m, LoadAppsCmd(m.dataProvider, m.currentRG), true
 
 	case "l":
-		if len(m.apps) == 0 {
+		if len(m.appsPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected app from table
-		selectedRow := m.appsTable.HighlightedRow()
+		selectedRow := m.appsPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -232,7 +230,7 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the app by name
 		var selectedApp models.ContainerApp
 		found := false
-		for _, app := range m.apps {
+		for _, app := range m.appsPage.Data {
 			if app.Name == appName {
 				selectedApp = app
 				found = true
@@ -247,12 +245,12 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		return m, m.commandProvider.ShowAppLogs(selectedApp), true
 
 	case "s", "e":
-		if len(m.apps) == 0 {
+		if len(m.appsPage.Data) == 0 {
 			return m, nil, true
 		}
 
 		// Get selected app from table
-		selectedRow := m.appsTable.HighlightedRow()
+		selectedRow := m.appsPage.Table.HighlightedRow()
 		if selectedRow.Data == nil {
 			return m, nil, true
 		}
@@ -265,7 +263,7 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 		// Find the app by name
 		var selectedApp models.ContainerApp
 		found := false
-		for _, app := range m.apps {
+		for _, app := range m.appsPage.Data {
 			if app.Name == appName {
 				selectedApp = app
 				found = true
@@ -282,10 +280,11 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 	case "esc":
 		// Go back to resource groups mode
 		m.mode = modeResourceGroups
-		m.loading = true
-		m.rg = "" // Clear the selected resource group
-		m.resourceGroups = nil
-		m.resourceGroupsTable = m.createResourceGroupsTable()
+		m.resourceGroupsPage.IsLoading = true
+		m.resourceGroupsPage.Error = nil
+		m.currentRG = "" // Clear the selected resource group
+		m.resourceGroupsPage.Data = nil
+		m.resourceGroupsPage.Table = m.createResourceGroupsTable()
 		return m, LoadResourceGroupsCmd(m.dataProvider), true
 	}
 
@@ -294,17 +293,17 @@ func (m model) handleAppsKey(msg tea.KeyMsg) (model, tea.Cmd, bool) {
 
 // View functions
 func (m model) viewApps() string {
-	if m.loading && len(m.apps) == 0 {
+	if m.appsPage.IsLoading && len(m.appsPage.Data) == 0 {
 		// Show loading state using generalized layout
 		return m.createLoadingLayout("Loading container apps...")
 	}
 
-	if m.err != nil && len(m.apps) == 0 {
+	if m.appsPage.Error != nil && len(m.appsPage.Data) == 0 {
 		// Show error state using generalized layout
-		return m.createErrorLayout(m.err.Error(), "Press r to retry or q to quit.")
+		return m.createErrorLayout(m.appsPage.Error.Error(), "Press r to retry or q to quit.")
 	}
 
 	// Show table view using generalized layout
-	tableView := m.appsTable.View()
+	tableView := m.appsPage.Table.View()
 	return m.createTableLayout(tableView)
 }
