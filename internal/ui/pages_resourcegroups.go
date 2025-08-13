@@ -1,8 +1,9 @@
 package ui
 
 import (
-	"fmt"
+	"sort"
 	"strings"
+	"unicode/utf8"
 
 	models "github.com/IAL32/az-tui/internal/models"
 
@@ -10,6 +11,70 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/evertras/bubble-table/table"
 )
+
+const (
+	maxTagsDisplayLength = 120
+	truncationSuffix     = "..."
+	noTagsPlaceholder    = "-"
+	tagSeparator         = ", "
+	tagKeyValueSeparator = "="
+)
+
+func formatResourceGroupTags(tags map[string]string) string {
+	if len(tags) == 0 {
+		return noTagsPlaceholder
+	}
+
+	tagPairs := make([]string, 0, len(tags))
+	var builder strings.Builder
+
+	for key, value := range tags {
+		if key == "" {
+			continue
+		}
+
+		displayValue := value
+		if displayValue == "" {
+			displayValue = `""`
+		}
+
+		builder.Reset()
+		builder.WriteString(key)
+		builder.WriteString(tagKeyValueSeparator)
+		builder.WriteString(displayValue)
+
+		tagPairs = append(tagPairs, builder.String())
+	}
+
+	if len(tagPairs) == 0 {
+		return noTagsPlaceholder
+	}
+
+	sort.Strings(tagPairs)
+	result := strings.Join(tagPairs, tagSeparator)
+
+	return truncateStringUnicodeSafe(result, maxTagsDisplayLength, truncationSuffix)
+}
+
+func truncateStringUnicodeSafe(s string, maxLength int, suffix string) string {
+	if utf8.RuneCountInString(s) <= maxLength {
+		return s
+	}
+
+	suffixLen := utf8.RuneCountInString(suffix)
+	if maxLength <= suffixLen {
+		return string([]rune(suffix)[:maxLength])
+	}
+
+	targetLength := maxLength - suffixLen
+	runes := []rune(s)
+
+	if len(runes) <= targetLength {
+		return s
+	}
+
+	return string(runes[:targetLength]) + suffix
+}
 
 // createResourceGroupsTable creates a table component for resource groups
 func (m model) createResourceGroupsTable() table.Model {
@@ -37,19 +102,7 @@ func (m model) createResourceGroupsTable() table.Model {
 				state = "Unknown"
 			}
 
-			// Format tags
-			tags := "-"
-			if len(rg.Tags) > 0 {
-				var tagPairs []string
-				for k, v := range rg.Tags {
-					tagPairs = append(tagPairs, fmt.Sprintf("%s=%s", k, v))
-				}
-				tags = strings.Join(tagPairs, ", ")
-				// Truncate if too long for the wider column
-				if len(tags) > 120 {
-					tags = tags[:117] + "..."
-				}
-			}
+			tags := formatResourceGroupTags(rg.Tags)
 
 			rows[i] = table.NewRow(table.RowData{
 				columnKeyRGName:     rg.Name,
