@@ -671,14 +671,6 @@ func (ckm *contextKeyMap) FullHelp() [][]key.Binding {
 
 // Helper methods
 
-func (m model) withConfirm(text string, onYes func(model) (model, tea.Cmd), onNo func(model) (model, tea.Cmd)) model {
-	m.confirm.Visible = true
-	m.confirm.Text = text
-	m.confirm.OnYes = onYes
-	m.confirm.OnNo = onNo
-	return m
-}
-
 // createCommandProvider creates the appropriate command provider based on mock mode
 func createCommandProvider(useMockMode bool) providers.CommandProvider {
 	if useMockMode {

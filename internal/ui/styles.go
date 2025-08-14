@@ -8,8 +8,7 @@ import (
 // Legacy style variables for backward compatibility
 // These are now managed through the layout system but kept for existing code
 var (
-	StyleError  = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	styleAccent = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
+	StyleError = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 )
 
 // GetLayoutManager returns a configured layout manager with default theme and dimensions
