@@ -179,15 +179,15 @@ func DefaultTheme() ThemeConfig {
 			Error:      lipgloss.Color("#FF6B6B"),
 			Info:       lipgloss.Color("#6495ED"),
 			Background: lipgloss.Color("#FFFDF5"),
-			Foreground: lipgloss.Color("#343433"),
+			Foreground: lipgloss.Color("#888888"),
 			Border:     lipgloss.Color("#a38"),
-			Highlight:  lipgloss.Color("#a7a"),
+			Highlight:  lipgloss.Color("#888888"),
 			AdaptiveBackground: lipgloss.AdaptiveColor{
 				Light: "#D9DCCF",
 				Dark:  "#353533",
 			},
 			AdaptiveForeground: lipgloss.AdaptiveColor{
-				Light: "#343433",
+				Light: "#888888",
 				Dark:  "#C1C6B2",
 			},
 			AdaptiveBorder: lipgloss.AdaptiveColor{

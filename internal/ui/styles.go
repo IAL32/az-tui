@@ -70,7 +70,7 @@ func GetStatusStyle(status string) lipgloss.Style {
 
 func GetTableBaseStyle() lipgloss.Style {
 	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#a7a")).
+		Foreground(lipgloss.Color("#888888")).
 		BorderForeground(lipgloss.Color("#a38"))
 }
 

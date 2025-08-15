@@ -389,19 +389,19 @@ func (m model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Handle help toggle at the main model level
-	if msg.String() == "?" {
-		m.help.ShowAll = !m.help.ShowAll
-		return m, nil
-	}
-
-	// Delegate key handling to core
+	// Delegate key handling to core first (including help toggle)
 	var cmd tea.Cmd
 	var handled bool
 
 	cmd, handled = m.core.HandleKeyMsg(msg)
 	if handled {
 		return m, cmd
+	}
+
+	// Handle help toggle at the main model level only if not handled by pages
+	if msg.String() == "?" {
+		m.help.ShowAll = !m.help.ShowAll
+		return m, nil
 	}
 
 	// Handle table navigation for unhandled keys

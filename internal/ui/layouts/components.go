@@ -160,12 +160,20 @@ func (f *DefaultHelpBarFactory) CreateHelpBar(context HelpContext) string {
 	// Create help text
 	helpText := ""
 	if context.ShowAll {
-		// When ShowAll is true, return the Bubble Tea help content if provided
+		// When ShowAll is true, prefer Bubble Tea help content if provided
 		if context.BubbleTeaHelp != "" {
 			return context.BubbleTeaHelp
 		}
-		// Fallback to empty if no Bubble Tea help provided
-		helpText = ""
+		// Fallback to showing all help items when no Bubble Tea help provided
+		if len(helpItems) > 0 {
+			helpText = ""
+			for i, item := range helpItems {
+				if i > 0 {
+					helpText += " • "
+				}
+				helpText += item
+			}
+		}
 	} else {
 		// Show minimal help
 		if len(helpItems) > 0 {

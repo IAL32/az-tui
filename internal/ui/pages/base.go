@@ -105,9 +105,6 @@ func (b *BasePage) HandleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool) {
 	switch msg.String() {
 	case "/":
 		return b.startFiltering(), true
-	case "?":
-		// Help toggle - let the parent handle this
-		return nil, false
 	case "ctrl+c", "q":
 		return tea.Quit, true
 	}

@@ -35,3 +35,4 @@ go.work.sum
 az-tui
 !cmd/az-tui
 dist/
+bin/

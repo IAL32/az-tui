@@ -68,6 +68,9 @@ func NewResourceGroupsPage(layoutSystem *layouts.LayoutSystem) *ResourceGroupsPa
 	// Enable navigation
 	page.SetNavigationFunc(page.handleNavigation)
 
+	// Set help keys for the base page
+	page.SetHelpKeys(page.GetHelpKeys())
+
 	return page
 }
 
@@ -179,6 +182,24 @@ func (p *ResourceGroupsPage) handleNavigation(rg models.ResourceGroup) tea.Cmd {
 
 // Event handling methods
 
+// HandleKeyMsg handles key messages for the resource groups page
+func (p *ResourceGroupsPage) HandleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool) {
+	// First, try base navigable page key handling
+	if cmd, handled := p.NavigablePage.HandleKeyMsg(msg); handled {
+		return cmd, handled
+	}
+
+	// Handle resource groups-specific keys
+	switch msg.String() {
+	case "r":
+		// Refresh
+		return p.Refresh(), true
+	}
+
+	// Don't handle any other keys - let them bubble up
+	return nil, false
+}
+
 // GetHelpKeys returns the help keys for the resource groups page
 func (p *ResourceGroupsPage) GetHelpKeys() []key.Binding {
 	return []key.Binding{
@@ -204,7 +225,7 @@ func (p *ResourceGroupsPage) View() string {
 
 // ViewWithHelpContext renders the resource groups page with help context
 func (p *ResourceGroupsPage) ViewWithHelpContext(helpContext layouts.HelpContext) string {
-	// Ensure the mode is set correctly
+	// Ensure the mode is set correctly, but preserve other context values
 	helpContext.Mode = layouts.ModeResourceGroups
 
 	// Handle loading state
